@@ -49,8 +49,8 @@ function createMockContext(options = {}) {
       return { constructor: { name: 'ForkScope' } }
     },
     async broadcast(channels, content, forced) {
-      broadcastCalls.push({ channels, content, forced })
-      if (options.mutateBroadcastChannels) channels.splice(0)
+      broadcastCalls.push({ channels: [...channels], content, forced })
+      channels.splice(0)
       return []
     },
     logger() {
@@ -1327,7 +1327,7 @@ test('scheduled push logs configured channel count when context broadcast consum
   const { apply } = loadPlugin()
   const calls = []
   const puppeteer = createFakePuppeteer({ calls })
-  const { ctx, intervals, broadcastCalls, loggerLines } = createMockContext({ puppeteer, mutateBroadcastChannels: true })
+  const { ctx, intervals, broadcastCalls, loggerLines } = createMockContext({ puppeteer })
 
   const config = {
     ...defaultConfig,
@@ -1343,7 +1343,7 @@ test('scheduled push logs configured channel count when context broadcast consum
   await intervals[0].callback()
 
   assert.equal(broadcastCalls.length, 1)
-  assert.deepEqual(broadcastCalls[0].channels, [])
+  assert.deepEqual(broadcastCalls[0].channels, ['sandbox:group-1', 'sandbox:group-2'])
   assert.equal(broadcastCalls[0].forced, true)
   assert.equal(loggerLines.some(([level, message]) => level === 'info' && /推送开始：2026-04-29，频道 2 个/.test(message)), true)
   assert.equal(loggerLines.some(([level, message]) => level === 'info' && /推送完成：2026-04-29，频道 2 个/.test(message)), true)
