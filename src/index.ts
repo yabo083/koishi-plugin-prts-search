@@ -11,7 +11,7 @@ export { getPrtsDayKey }
 export type { Config as ArknightsIntelConfig } from './types'
 
 export const name = 'miyako-intel'
-export const inject = { optional: ['puppeteer', 'console'] as const }
+export const inject = { optional: ['puppeteer', 'console', 'database'] as const }
 
 export const usage = `
 <p><strong>PRTS 今日情报</strong></p>
@@ -682,13 +682,14 @@ export function apply(ctx: Context, config: RuntimeConfig) {
       logger.debug(`PRTS 定时推送跳过：${dayKey} 已推送。`)
       return
     }
+    const channelCount = channels.length
 
     try {
-      logger.info(`PRTS 定时推送开始：${dayKey}，频道 ${channels.length} 个。`)
+      logger.info(`PRTS 定时推送开始：${dayKey}，频道 ${channelCount} 个。`)
       const daily = await service.getDailyInfo(false)
       await ctx.broadcast(channels, service.toBroadcastMessage(daily), true)
       lastPushedDayKey = dayKey
-      logger.info(`PRTS 定时推送完成：${dayKey}，频道 ${channels.length} 个。`)
+      logger.info(`PRTS 定时推送完成：${dayKey}，频道 ${channelCount} 个。`)
     } catch (error) {
       logger.warn(`PRTS 定时推送失败：${formatError(error)}`)
     }
