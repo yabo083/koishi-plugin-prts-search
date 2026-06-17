@@ -68,7 +68,8 @@
     "service": {
       "optional": [
         "puppeteer",
-        "console"
+        "console",
+        "database"
       ]
     }
   }

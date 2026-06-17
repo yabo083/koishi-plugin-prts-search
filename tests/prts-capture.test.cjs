@@ -50,6 +50,7 @@ function createMockContext(options = {}) {
     },
     async broadcast(channels, content, forced) {
       broadcastCalls.push({ channels, content, forced })
+      if (options.mutateBroadcastChannels) channels.splice(0)
       return []
     },
     logger() {
@@ -1314,6 +1315,38 @@ test('scheduled push wraps broadcast content with custom prefix and suffix', asy
   assert.match(String(broadcastCalls[0].content), /PRTS 今日情报/)
   assert.match(String(broadcastCalls[0].content), /base64/)
   assert.match(String(broadcastCalls[0].content), /来源：prts\.wiki/)
+})
+
+test('plugin declares database as optional service for scheduled context broadcast', () => {
+  const { inject } = loadPlugin()
+
+  assert.equal(inject.optional.includes('database'), true)
+})
+
+test('scheduled push logs configured channel count when context broadcast consumes targets', async () => {
+  const { apply } = loadPlugin()
+  const calls = []
+  const puppeteer = createFakePuppeteer({ calls })
+  const { ctx, intervals, broadcastCalls, loggerLines } = createMockContext({ puppeteer, mutateBroadcastChannels: true })
+
+  const config = {
+    ...defaultConfig,
+    now: '2026-04-29T05:12:00.000+08:00',
+    scheduledPush: {
+      enabled: true,
+      channels: ['sandbox:group-1', 'sandbox:group-2'],
+      cron: '12 5 * * *',
+    },
+  }
+
+  apply(ctx, config)
+  await intervals[0].callback()
+
+  assert.equal(broadcastCalls.length, 1)
+  assert.deepEqual(broadcastCalls[0].channels, [])
+  assert.equal(broadcastCalls[0].forced, true)
+  assert.equal(loggerLines.some(([level, message]) => level === 'info' && /推送开始：2026-04-29，频道 2 个/.test(message)), true)
+  assert.equal(loggerLines.some(([level, message]) => level === 'info' && /推送完成：2026-04-29，频道 2 个/.test(message)), true)
 })
 
 test('screenshot quality config controls viewport scale and output format', async () => {
