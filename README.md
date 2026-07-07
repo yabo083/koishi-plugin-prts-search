@@ -8,7 +8,7 @@ Miyako 游戏情报插件。当前提供 PRTS Wiki 今日信息卡片、今日�
 - `prts s` / `prts.s` / `prts.summary`：发送 PRTS 今日信息摘要文本。
 - `prts r [d|s|all]` / `prts.r [d|s|all]`：强制刷新今日信息缓存。
 - `prts cache` / `prts.cache`：查看缓存根目录、当前缓存日和最近缓存状态。
-- `w <关键词>`：检索 Warfarin Wiki 官方资料和本地全文缓存。
+- `w <关键词>`：检索 Warfarin Wiki 官方资料和本地全文缓存；默认一次返回 5 条消息，每条 5 项。
 - `w <编号>`：查看上一轮检索结果详情，例如 `w 1`。
 - `w+` / `w-` / `w+2`：翻页或跳转到指定页。
 - `w <关键词> <编号>`：搜索后直接查看指定结果，例如 `w 息壤 2`。
@@ -51,9 +51,12 @@ plugins:
       storyUpdateCron: 20 4 * * *
       storyUpdateOnStart: false
       pageSize: 5
+      initialPageCount: 5
 ```
 
 cron 使用 5 段格式：`分钟 小时 日期 月份 星期`，并按 `timezone` 生效。缓存目录相对 Koishi `baseDir`；使用 `prts cache` 可以确认实际位置。
+
+`wiki.pageSize` 控制每条搜索结果消息包含多少项，`wiki.initialPageCount` 控制首次 `w <关键词>` 和 `w+` / `w-` 相对翻页一次发送多少页。默认会先发送 `1-25`，`w+` 继续发送 `26-50`，`w-` 返回上一批窗口。
 
 ## 缓存与更新
 

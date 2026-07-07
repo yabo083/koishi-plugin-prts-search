@@ -43,6 +43,7 @@ export interface WarfarinWikiConfig {
   searchCacheTtlMs: number
   searchCacheMaxEntries: number
   pageSize: number
+  initialPageCount: number
   selectionTtlMs: number
   groupForwardEnabled: boolean
   groupForwardNodeLineLimit: number

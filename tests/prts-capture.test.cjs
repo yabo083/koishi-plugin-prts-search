@@ -159,6 +159,7 @@ const defaultConfig = {
     searchCacheTtlMs: 600000,
     searchCacheMaxEntries: 100,
     pageSize: 5,
+    initialPageCount: 5,
     selectionTtlMs: 300000,
   },
   now: '2026-04-29T02:00:00.000+08:00',
@@ -293,6 +294,7 @@ test('warfarin wiki w command searches official source, pages, and fetches conte
     wiki: {
       ...defaultConfig.wiki,
       storySearchEnabled: false,
+      initialPageCount: 1,
     },
   })
 
@@ -327,6 +329,59 @@ test('warfarin wiki w command searches official source, pages, and fetches conte
   assert.equal(requests.length, 2)
 })
 
+test('warfarin wiki search sends default 25-result batch windows', async () => {
+  const { apply } = loadPlugin()
+  const { ctx, commandHandlers, createSession, sent } = createMockContext({
+    http: async (url) => {
+      if (String(url).includes('story.example')) return { query: '息壤', total: 0, results: [] }
+      return {
+        query: '息壤',
+        results: Array.from({ length: 52 }, (_, index) => ({
+          slug: `text_${index + 1}`,
+          name: `息壤资料${index + 1}`,
+          type: 'lore',
+          category: '见闻辑录',
+          snippet: `第 ${index + 1} 条息壤相关资料。`,
+          score: 100 - index,
+        })),
+      }
+    },
+  })
+
+  apply(ctx, {
+    ...defaultConfig,
+    wiki: {
+      ...defaultConfig.wiki,
+      storySearchEnabled: false,
+    },
+  })
+
+  const search = commandHandlers.get('w <input:text>')
+  const next = commandHandlers.get('w+')
+  const previous = commandHandlers.get('w-')
+  const session = createSession()
+
+  const searchResult = await search({ session, options: {} }, '息壤')
+  assert.equal(searchResult, undefined)
+  assert.equal(sent.length, 5)
+  assert.match(String(sent[0]), /1\. 见闻辑录：息壤资料1/)
+  assert.match(String(sent[4]), /25\. 见闻辑录：息壤资料25/)
+
+  sent.length = 0
+  const nextResult = await next({ session })
+  assert.equal(nextResult, undefined)
+  assert.equal(sent.length, 5)
+  assert.match(String(sent[0]), /26\. 见闻辑录：息壤资料26/)
+  assert.match(String(sent[4]), /50\. 见闻辑录：息壤资料50/)
+
+  sent.length = 0
+  const previousResult = await previous({ session })
+  assert.equal(previousResult, undefined)
+  assert.equal(sent.length, 5)
+  assert.match(String(sent[0]), /1\. 见闻辑录：息壤资料1/)
+  assert.match(String(sent[4]), /25\. 见闻辑录：息壤资料25/)
+})
+
 test('warfarin wiki supports compact w+page jump input', async () => {
   const { apply } = loadPlugin()
   const requests = []
@@ -353,6 +408,7 @@ test('warfarin wiki supports compact w+page jump input', async () => {
     wiki: {
       ...defaultConfig.wiki,
       storySearchEnabled: false,
+      initialPageCount: 1,
     },
   })
 
@@ -401,6 +457,7 @@ test('warfarin wiki search displays local story bundle data update date across p
       ...defaultConfig.wiki,
       storySearchEnabled: true,
       pageSize: 5,
+      initialPageCount: 1,
     },
   })
 
@@ -871,6 +928,111 @@ test('warfarin wiki group replies can be sent as OneBot forward messages', async
   assert.equal(forwardCalls[0].groupId, '10001')
   assert.match(forwardCalls[0].messages[0].data.content, /Warfarin Wiki 检索：息壤/)
   assert.match(forwardCalls[0].messages[0].data.content, /中枢档案：息壤/)
+})
+
+test('warfarin wiki private replies can be sent as OneBot forward messages', async () => {
+  const { apply } = loadPlugin()
+  const forwardCalls = []
+  const { ctx, commandHandlers, createSession, sent } = createMockContext({
+    http: async (url) => {
+      if (String(url).includes('story.example')) return { query: '息壤', total: 0, results: [] }
+      return {
+        query: '息壤',
+        results: Array.from({ length: 6 }, (_, index) => ({
+          slug: `text_${index + 1}`,
+          name: `息壤资料${index + 1}`,
+          type: 'lore',
+          category: '见闻辑录',
+          snippet: `第 ${index + 1} 条息壤相关资料。`,
+          score: 20 - index,
+        })),
+      }
+    },
+  })
+
+  apply(ctx, {
+    ...defaultConfig,
+    wiki: {
+      ...defaultConfig.wiki,
+      storySearchEnabled: false,
+      groupForwardEnabled: true,
+    },
+  })
+
+  const session = createSession()
+  session.platform = 'onebot'
+  session.guildId = ''
+  session.channelId = 'user-1'
+  session.onebot = {
+    async sendPrivateForwardMsg(userId, messages) {
+      forwardCalls.push({ userId, messages })
+    },
+  }
+
+  const search = commandHandlers.get('w <input:text>')
+  const result = await search({ session, options: {} }, '息壤')
+
+  assert.equal(result, undefined)
+  assert.equal(sent.length, 0)
+  assert.equal(forwardCalls.length, 1)
+  assert.equal(forwardCalls[0].userId, 'user-1')
+  assert.equal(forwardCalls[0].messages.length, 2)
+  assert.match(forwardCalls[0].messages[0].data.content, /1\. 见闻辑录：息壤资料1/)
+  assert.match(forwardCalls[0].messages[1].data.content, /6\. 见闻辑录：息壤资料6/)
+})
+
+test('warfarin wiki private forward does not treat onebot private cid as group id', async () => {
+  const { apply } = loadPlugin()
+  const forwardCalls = []
+  const { ctx, commandHandlers, createSession, sent } = createMockContext({
+    http: async (url) => {
+      if (String(url).includes('story.example')) return { query: '息壤', total: 0, results: [] }
+      return {
+        query: '息壤',
+        results: Array.from({ length: 6 }, (_, index) => ({
+          slug: `text_${index + 1}`,
+          name: `息壤资料${index + 1}`,
+          type: 'lore',
+          category: '见闻辑录',
+          snippet: `第 ${index + 1} 条息壤相关资料。`,
+          score: 20 - index,
+        })),
+      }
+    },
+  })
+
+  apply(ctx, {
+    ...defaultConfig,
+    wiki: {
+      ...defaultConfig.wiki,
+      storySearchEnabled: false,
+      groupForwardEnabled: true,
+    },
+  })
+
+  const session = createSession()
+  session.platform = 'onebot'
+  session.guildId = ''
+  session.channelId = 'onebot:private:2657455842'
+  session.cid = 'onebot:private:2657455842'
+  session.userId = '2657455842'
+  session.onebot = {
+    async send_group_forward_msg() {
+      throw new Error('private cid must not be sent as group_id')
+    },
+    async send_private_forward_msg(payload) {
+      forwardCalls.push(payload)
+    },
+  }
+
+  const search = commandHandlers.get('w <input:text>')
+  const result = await search({ session, options: {} }, '息壤')
+
+  assert.equal(result, undefined)
+  assert.equal(sent.length, 0)
+  assert.equal(forwardCalls.length, 1)
+  assert.equal(forwardCalls[0].user_id, 2657455842)
+  assert.equal(forwardCalls[0].messages.length, 2)
 })
 
 test('warfarin wiki group forward falls back to plain text when adapter send fails', async () => {

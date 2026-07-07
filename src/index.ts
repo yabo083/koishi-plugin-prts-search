@@ -36,6 +36,7 @@ const storyScopes = ['missions']
 const defaultStoryBundleManifestUrl = 'https://github.com/yabo083/koishi-plugin-miyako-intel/releases/download/warfarin-story-latest/warfarin-story-cn.manifest.json'
 type WikiSearchSource = 'wiki' | 'story'
 type SelectedWikiAnchor = WarfarinWikiAnchor & { sourceKind?: WikiSearchSource }
+type WikiReplyPayload = string | string[]
 
 const summaryDisplayItemsDefault = [
   { key: 'resource', enabled: true },
@@ -148,6 +149,7 @@ export const Config = Schema.intersect([
       searchCacheTtlMs: Schema.number().min(0).max(86400000).default(600000).description('搜索结果缓存时间，单位毫秒。'),
       searchCacheMaxEntries: Schema.number().min(1).max(1000).default(100).description('搜索缓存最大数量。'),
       pageSize: Schema.number().min(1).max(10).default(5).description('每页显示结果数。'),
+      initialPageCount: Schema.number().min(1).max(10).default(5).description('首次关键词检索和 w+ / w- 相对翻页时一次发送多少页。'),
       selectionTtlMs: Schema.number().min(30000).max(3600000).default(300000).description('编号选择保留时间，单位毫秒。'),
       groupForwardEnabled: Schema.boolean().default(false).description('群聊中是否将 Warfarin 查询回复作为 OneBot/NapCat 合并转发发送。失败时自动回退普通文本。'),
       groupForwardNodeLineLimit: Schema.number().min(3).max(80).default(20).description('合并转发每个节点最多包含多少行文本。'),
@@ -365,7 +367,7 @@ export function apply(ctx: Context, config: RuntimeConfig) {
         : await searchAllWikiSources(normalizedKeyword)
       const dataUpdatedLabel = await getStoryDataUpdatedLabel()
       wikiSelections.set(getWikiSelectionKey(session), { expiresAt: Date.now() + resolved.wiki.selectionTtlMs, keyword: normalizedKeyword, offset: 0, total: result.total, results: result.results, dataUpdatedLabel })
-      return formatWikiSearchResults({ ...result, keyword: normalizedKeyword, offset: 0, pageSize: resolved.wiki.pageSize, commandName: 'w', sourceLabel: '综合搜索', showSourceLabel: false, dataUpdatedLabel })
+      return formatWikiSearchBatch({ ...result, keyword: normalizedKeyword, offset: 0, pageSize: resolved.wiki.pageSize, pageCount: resolved.wiki.initialPageCount, commandName: 'w', sourceLabel: '综合搜索', showSourceLabel: false, dataUpdatedLabel })
     } catch (error) {
       logger.warn(`${source === 'story' ? '剧情/任务全文' : '终末地资料'}检索失败：${formatError(error)}`)
       return formatWikiCommandError(error, source === 'story' ? '剧情/任务检索暂时不可用，请稍后重试。' : '资料检索暂时不可用，请稍后重试。')
@@ -497,11 +499,12 @@ export function apply(ctx: Context, config: RuntimeConfig) {
     const key = getWikiSelectionKey(session)
     const cached = wikiSelections.get(key)
     if (!cached || cached.expiresAt < Date.now()) return '请先使用 w 关键词 检索。'
-    const lastPageOffset = Math.floor(Math.max(0, cached.results.length - 1) / resolved.wiki.pageSize) * resolved.wiki.pageSize
-    const nextOffset = Math.min(Math.max(0, cached.offset + direction * resolved.wiki.pageSize), lastPageOffset)
+    const batchSize = getWikiBatchSize(resolved.wiki)
+    const lastPageOffset = Math.floor(Math.max(0, cached.results.length - 1) / batchSize) * batchSize
+    const nextOffset = Math.min(Math.max(0, cached.offset + direction * batchSize), lastPageOffset)
     cached.offset = nextOffset
     cached.expiresAt = Date.now() + resolved.wiki.selectionTtlMs
-    return formatWikiSearchResults({ results: cached.results, total: cached.total, took_ms: 0, keyword: cached.keyword, offset: cached.offset, pageSize: resolved.wiki.pageSize, commandName: 'w', sourceLabel: '综合搜索', showSourceLabel: false, dataUpdatedLabel: cached.dataUpdatedLabel })
+    return formatWikiSearchBatch({ results: cached.results, total: cached.total, took_ms: 0, keyword: cached.keyword, offset: cached.offset, pageSize: resolved.wiki.pageSize, pageCount: resolved.wiki.initialPageCount, commandName: 'w', sourceLabel: '综合搜索', showSourceLabel: false, dataUpdatedLabel: cached.dataUpdatedLabel })
   }
 
   async function pageWikiPage(session: any, page: unknown) {
@@ -517,27 +520,34 @@ export function apply(ctx: Context, config: RuntimeConfig) {
     return formatWikiSearchResults({ results: cached.results, total: cached.total, took_ms: 0, keyword: cached.keyword, offset: cached.offset, pageSize: resolved.wiki.pageSize, commandName: 'w', sourceLabel: '综合搜索', showSourceLabel: false, dataUpdatedLabel: cached.dataUpdatedLabel })
   }
 
-  async function sendWikiReply(session: any, createText: () => Promise<string> | string) {
+  async function sendWikiReply(session: any, createText: () => Promise<WikiReplyPayload> | WikiReplyPayload) {
     const text = await createText()
     return sendWikiText(session, text)
   }
 
-  async function sendWikiText(session: any, text: string) {
-    if (!text) return text
-    if (!shouldSendWikiForward(session)) return text
+  async function sendWikiText(session: any, text: WikiReplyPayload) {
+    const messages = Array.isArray(text) ? text.filter(Boolean) : [text].filter(Boolean)
+    if (!messages.length) return Array.isArray(text) ? undefined : text
+    if (!shouldSendWikiForward(session)) {
+      if (messages.length === 1) return messages[0]
+      for (const message of messages) await session.send(message)
+      return undefined
+    }
     try {
-      const sent = await sendOneBotGroupForward(session, text, resolved.wiki)
+      const sent = await sendOneBotForward(session, messages, resolved.wiki)
       if (sent) return undefined
     } catch (error) {
       logger.warn(`Warfarin Wiki 合并转发发送失败，回退普通文本：${formatError(error)}`)
     }
-    return text
+    if (messages.length === 1) return messages[0]
+    for (const message of messages) await session.send(message)
+    return undefined
   }
 
   function shouldSendWikiForward(session: any) {
     if (!resolved.wiki.groupForwardEnabled || !session) return false
     if (session.guildId || session.subtype === 'group') return true
-    if (session.platform === 'onebot' && session.channelId && session.channelId !== session.userId) return true
+    if (session.platform === 'onebot' && (session.userId || session.uid || session.channelId)) return true
     return false
   }
 
@@ -773,6 +783,7 @@ function resolveConfig(config: Partial<RuntimeConfig> = {}): RuntimeConfig {
       searchCacheTtlMs: config.wiki?.searchCacheTtlMs ?? 600000,
       searchCacheMaxEntries: config.wiki?.searchCacheMaxEntries ?? 100,
       pageSize: config.wiki?.pageSize ?? 5,
+      initialPageCount: config.wiki?.initialPageCount ?? 5,
       selectionTtlMs: config.wiki?.selectionTtlMs ?? 300000,
       groupForwardEnabled: config.wiki?.groupForwardEnabled ?? false,
       groupForwardNodeLineLimit: config.wiki?.groupForwardNodeLineLimit ?? 20,
@@ -835,34 +846,75 @@ function formatWikiCommandError(error: unknown, fallback: string) {
   return fallback
 }
 
+function getWikiBatchSize(wikiConfig: RuntimeConfig['wiki']) {
+  return Math.max(1, wikiConfig.pageSize) * Math.max(1, wikiConfig.initialPageCount)
+}
+
+function formatWikiSearchBatch(result: { results: SelectedWikiAnchor[]; total: number; took_ms: number; keyword: string; offset: number; pageSize: number; pageCount: number; commandName: string; sourceLabel: string; showSourceLabel: boolean; dataUpdatedLabel?: string }) {
+  const pageSize = Math.max(1, result.pageSize)
+  const pageCount = Math.max(1, result.pageCount)
+  const maxOffset = Math.min(result.offset + pageSize * pageCount, result.results.length)
+  const messages: string[] = []
+  for (let offset = result.offset; offset < maxOffset; offset += pageSize) {
+    const text = formatWikiSearchResults({
+      results: result.results,
+      total: result.total,
+      took_ms: result.took_ms,
+      keyword: result.keyword,
+      offset,
+      pageSize: result.pageSize,
+      commandName: result.commandName,
+      sourceLabel: result.sourceLabel,
+      showSourceLabel: result.showSourceLabel,
+      dataUpdatedLabel: result.dataUpdatedLabel,
+    })
+    if (text) messages.push(text)
+  }
+  if (messages.length) return messages
+  return formatWikiSearchResults(result)
+}
+
 function formatSearchCacheStatus(ttlMs: number, entries: number, maxEntries: number) {
   if (!ttlMs) return '关闭'
   const minutes = Math.max(1, Math.round(ttlMs / 60000))
   return `${entries}/${maxEntries}，${minutes} 分钟`
 }
 
-async function sendOneBotGroupForward(session: any, text: string, wikiConfig: RuntimeConfig['wiki']) {
-  const groupId = session?.guildId || session?.channelId || session?.cid
-  if (!groupId) return false
-  const messages = buildOneBotForwardNodes(text, wikiConfig)
+async function sendOneBotForward(session: any, texts: string[], wikiConfig: RuntimeConfig['wiki']) {
   const onebot = session?.onebot || session?.bot?.internal
-  if (onebot?.sendGroupForwardMsg) {
-    await onebot.sendGroupForwardMsg(groupId, messages)
+  const messages = buildOneBotForwardNodes(texts, wikiConfig)
+  const groupId = session?.guildId || (session?.subtype === 'group' ? session?.channelId || session?.cid : '') || (isOneBotGroupChannel(session?.cid) ? session.cid : '')
+  if (groupId) {
+    if (onebot?.sendGroupForwardMsg) {
+      await onebot.sendGroupForwardMsg(groupId, messages)
+      return true
+    }
+    if (onebot?.send_group_forward_msg) {
+      await onebot.send_group_forward_msg({ group_id: normalizeOneBotId(groupId), messages })
+      return true
+    }
+  }
+  const userId = session?.userId || session?.uid || (isOneBotPrivateChannel(session?.cid) ? session.cid : session?.channelId)
+  if (!userId) return false
+  if (onebot?.sendPrivateForwardMsg) {
+    await onebot.sendPrivateForwardMsg(userId, messages)
     return true
   }
-  if (onebot?.send_group_forward_msg) {
-    await onebot.send_group_forward_msg({ group_id: normalizeOneBotId(groupId), messages })
+  if (onebot?.send_private_forward_msg) {
+    await onebot.send_private_forward_msg({ user_id: normalizeOneBotId(userId), messages })
     return true
   }
   return false
 }
 
-function buildOneBotForwardNodes(text: string, wikiConfig: RuntimeConfig['wiki']) {
-  const lines = String(text || '').split(/\r?\n/)
+function buildOneBotForwardNodes(texts: string[], wikiConfig: RuntimeConfig['wiki']) {
   const limit = Math.max(3, Math.min(80, Number(wikiConfig.groupForwardNodeLineLimit || 20)))
   const chunks: string[] = []
-  for (let index = 0; index < lines.length; index += limit) {
-    chunks.push(lines.slice(index, index + limit).join('\n').trim())
+  for (const text of texts) {
+    const lines = String(text || '').split(/\r?\n/)
+    for (let index = 0; index < lines.length; index += limit) {
+      chunks.push(lines.slice(index, index + limit).join('\n').trim())
+    }
   }
   return chunks.filter(Boolean).map((content) => ({
     type: 'node',
@@ -876,7 +928,17 @@ function buildOneBotForwardNodes(text: string, wikiConfig: RuntimeConfig['wiki']
 
 function normalizeOneBotId(value: unknown) {
   const text = String(value || '').trim()
+  const match = text.match(/^onebot:(?:group|private):(\d+)$/i)
+  if (match) return Number(match[1])
   return /^\d+$/.test(text) ? Number(text) : text
+}
+
+function isOneBotGroupChannel(value: unknown) {
+  return /^onebot:group:\d+$/i.test(String(value || '').trim())
+}
+
+function isOneBotPrivateChannel(value: unknown) {
+  return /^onebot:private:\d+$/i.test(String(value || '').trim())
 }
 
 function createKoishiHttpFetch(http: any, timeoutMs: number) {
