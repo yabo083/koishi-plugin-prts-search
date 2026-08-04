@@ -30,16 +30,26 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version: "24"
-          cache: npm
-          cache-dependency-path: package.json
+
+      - name: Check for source updates
+        id: source-check
+        env:
+          STORY_SOURCE_UPDATE_DELAY_HOURS: "24"
+          NODE_USE_ENV_PROXY: "1"
+          STORY_GITHUB_FETCHER: "curl"
+          STORY_FORCE_DEEP_CHECK: ${{ github.event.inputs.force_deep_check == 'true' && '1' || '0' }}
+        run: node scripts/check-warfarin-story-update.mjs
 
       - name: Install
-        run: npm install
+        if: steps.source-check.outputs.needs_build == 'true'
+        run: npm ci --prefer-offline --no-audit
 
       - name: Build server
+        if: steps.source-check.outputs.needs_build == 'true'
         run: npm run build:server
 
       - name: Build Warfarin story bundle
+        if: steps.source-check.outputs.needs_build == 'true'
         env:
           STORY_UPDATE_RATE_LIMIT_MS: "300"
           STORY_UPDATE_CONCURRENCY: "3"
@@ -51,6 +61,7 @@ jobs:
         run: node scripts/build-warfarin-story-bundle.mjs
 
       - name: Publish bundle release assets
+        if: steps.source-check.outputs.needs_build == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

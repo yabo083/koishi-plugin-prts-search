@@ -536,14 +536,72 @@ test('story bundle workflow sets friendly pacing defaults', () => {
   assert.match(workflow, /STORY_UPDATE_RATE_LIMIT_MS:\s*"300"/)
   assert.match(workflow, /STORY_UPDATE_CONCURRENCY:\s*"3"/)
   assert.match(workflow, /runs-on:\s*\[self-hosted, linux, warfarin-story\]/)
-  assert.match(workflow, /cache:\s*npm/)
-  assert.match(workflow, /cache-dependency-path:\s*package\.json/)
+  assert.doesNotMatch(workflow, /cache:\s*npm/)
+  assert.match(workflow, /node scripts\/check-warfarin-story-update\.mjs/)
+  assert.match(workflow, /npm ci --prefer-offline --no-audit/)
+  assert.match(workflow, /if:\s*steps\.source-check\.outputs\.needs_build == 'true'/)
   assert.match(workflow, /STORY_SOURCE_UPDATE_DELAY_HOURS:\s*"24"/)
   assert.match(workflow, /NODE_USE_ENV_PROXY:\s*"1"/)
   assert.match(workflow, /STORY_GITHUB_FETCHER:\s*"curl"/)
   assert.match(workflow, /force_deep_check:/)
   assert.match(workflow, /STORY_FORCE_DEEP_CHECK:/)
   assert.match(workflow, /STORY_CATEGORIES:/)
+})
+
+test('story bundle preflight skips dependency installation when source is unchanged', () => {
+  const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'miyako-story-preflight-'))
+  const outputFile = path.join(baseDir, 'github-output')
+  const mockFile = path.join(baseDir, 'mock-fetch.mjs')
+  fs.writeFileSync(mockFile, `
+    function response(payload) {
+      return { ok: true, status: 200, async text() { return typeof payload === 'string' ? payload : JSON.stringify(payload) } }
+    }
+    globalThis.fetch = async (url) => {
+      const value = String(url)
+      if (value === 'https://warfarin.wiki/cn') return response('<html><body>最后更新：2026-05-14</body></html>')
+      if (value.endsWith('.manifest.json')) return response({ language: 'cn', parserVersion: 3, sourceUpdatedAt: '2026-05-14', count: 4047 })
+      throw new Error('unexpected fetch: ' + value)
+    }
+  `)
+
+  const result = childProcess.spawnSync(process.execPath, ['--import', pathToFileURL(mockFile).href, path.join(rootDir, 'scripts', 'check-warfarin-story-update.mjs')], {
+    cwd: rootDir,
+    encoding: 'utf8',
+    env: { ...process.env, GITHUB_OUTPUT: outputFile, STORY_GITHUB_FETCHER: 'fetch', STORY_HTML_FETCHER: 'fetch' },
+  })
+
+  assert.equal(result.status, 0, result.stderr || result.stdout)
+  assert.match(result.stdout, /"needsBuild": false/)
+  assert.match(result.stdout, /"reason": "source-unchanged"/)
+  assert.match(fs.readFileSync(outputFile, 'utf8'), /needs_build=false/)
+})
+
+test('story bundle preflight rebuilds an unchanged source for an outdated parser', () => {
+  const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'miyako-story-preflight-parser-'))
+  const outputFile = path.join(baseDir, 'github-output')
+  const mockFile = path.join(baseDir, 'mock-fetch.mjs')
+  fs.writeFileSync(mockFile, `
+    function response(payload) {
+      return { ok: true, status: 200, async text() { return typeof payload === 'string' ? payload : JSON.stringify(payload) } }
+    }
+    globalThis.fetch = async (url) => {
+      const value = String(url)
+      if (value === 'https://warfarin.wiki/cn') return response('<html><body>最后更新：2026-05-14</body></html>')
+      if (value.endsWith('.manifest.json')) return response({ language: 'cn', parserVersion: 2, sourceUpdatedAt: '2026-05-14', count: 4047 })
+      throw new Error('unexpected fetch: ' + value)
+    }
+  `)
+
+  const result = childProcess.spawnSync(process.execPath, ['--import', pathToFileURL(mockFile).href, path.join(rootDir, 'scripts', 'check-warfarin-story-update.mjs')], {
+    cwd: rootDir,
+    encoding: 'utf8',
+    env: { ...process.env, GITHUB_OUTPUT: outputFile, STORY_GITHUB_FETCHER: 'fetch', STORY_HTML_FETCHER: 'fetch' },
+  })
+
+  assert.equal(result.status, 0, result.stderr || result.stdout)
+  assert.match(result.stdout, /"needsBuild": true/)
+  assert.match(result.stdout, /"reason": "parser-outdated"/)
+  assert.match(fs.readFileSync(outputFile, 'utf8'), /needs_build=true/)
 })
 
 test('story bundle builder can build a full-text category bundle from Warfarin API lists', () => {
