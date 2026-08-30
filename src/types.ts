@@ -1,29 +1,11 @@
 export interface Config {
-  baseUrl: string
-  homepagePath: string
-  cacheDirectory: string
-  timezone: string
-  dailyRefreshHour: number
-  scheduledRefreshMinute?: number
+  /** 每日情报卡片总开关：关闭后不抓取、不推送 */
+  dailyCardEnabled: boolean
   refreshCron: string
   logLevel: LogLevel
-  navigationTimeoutMs: number
-  renderDelayMs: number
-  viewportWidth: number
-  viewportHeight: number
-  deviceScaleFactor: number
-  imageFormat: ImageFormat
-  jpegQuality: number
-  staleFallback: boolean
-  messagePrefix: string
-  messageSuffix: string
-  summaryMaxItems: number
-  summaryDatePreview: boolean
-  summaryDisplayItems: SummaryDisplayItemConfig[]
-  cardTheme: CardThemeConfig
-  cacheMaintenance: CacheMaintenanceConfig
   scheduledPush: ScheduledPushConfig
   wiki: WarfarinWikiConfig
+  /** 测试用时间覆盖 */
   now?: string
 }
 
@@ -70,39 +52,7 @@ export interface CacheMaintenanceConfig {
   deleteAfterArchive: boolean
 }
 
-export interface CardThemeConfig {
-  fontFamily: string
-  backgroundColor: string
-  primaryColor: string
-  warningColor: string
-  dangerColor: string
-  textColor: string
-}
-
 export type LogLevel = 'silent' | 'warn' | 'info' | 'debug'
-export type ImageFormat = 'png' | 'jpeg'
-export type SummaryDisplayItemKey =
-  | 'resource'
-  | 'annihilation'
-  | 'event'
-  | 'voucher'
-  | 'operator-birthday'
-  | 'operator-recent'
-  | 'operator-voucher'
-  | 'operator-kernel-headhunting'
-  | 'operator-outfit'
-  | 'operator-new-module'
-  | 'operator-headhunting'
-  | 'operator-event'
-  | 'recent-stage'
-  | 'recent-furniture'
-  | 'recent-other'
-
-export interface SummaryDisplayItemConfig {
-  key: SummaryDisplayItemKey
-  enabled: boolean
-}
-
 export type CaptureKind = 'daily'
 
 export interface CachedImageResult {
@@ -113,7 +63,6 @@ export interface CachedImageResult {
   mimeType?: string
   titles?: string[]
   sourceUrls?: string[]
-  summaryItems?: SummarySection[]
 }
 
 export interface CacheManifest {
@@ -123,10 +72,4 @@ export interface CacheManifest {
   sourceUrls: string[]
   titles?: string[]
   mimeType?: string
-  summaryItems?: SummarySection[]
-}
-
-export interface SummarySection {
-  title: string
-  items: string[]
 }

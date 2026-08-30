@@ -157,8 +157,7 @@ export class DailyImageCache {
       mimeType: manifest?.mimeType,
       titles: manifest?.titles,
       sourceUrls: manifest?.sourceUrls,
-      summaryItems: manifest?.summaryItems,
-    }
+      }
   }
 
   async write(kind: CaptureKind, buffer: Buffer, manifest: Omit<CacheManifest, 'kind' | 'dayKey' | 'generatedAt'>) {
@@ -183,8 +182,7 @@ export class DailyImageCache {
       mimeType: manifest.mimeType,
       titles: manifest.titles,
       sourceUrls: manifest.sourceUrls,
-      summaryItems: manifest.summaryItems,
-    }
+      }
   }
 
   async readLatest(kind: CaptureKind) {
@@ -202,8 +200,7 @@ export class DailyImageCache {
           mimeType: manifest?.mimeType,
           titles: manifest?.titles,
           sourceUrls: manifest?.sourceUrls,
-          summaryItems: manifest?.summaryItems,
-        }
+          }
       }
     }
 

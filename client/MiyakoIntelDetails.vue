@@ -42,6 +42,10 @@
       <div class="miyako-intel-nav__section">
         <div class="miyako-intel-nav__section-title">状态</div>
         <div class="miyako-intel-nav__status">
+          <span>每日信笺</span>
+          <strong>{{ dailyStatus }}</strong>
+        </div>
+        <div class="miyako-intel-nav__status">
           <span>定时推送</span>
           <strong>{{ pushStatus }}</strong>
         </div>
@@ -56,14 +60,6 @@
         <div class="miyako-intel-nav__status">
           <span>全文缓存</span>
           <strong>{{ status.sites.story }}</strong>
-        </div>
-        <div class="miyako-intel-nav__status">
-          <span>PRTS 补缓存</span>
-          <strong>{{ status.cache.refreshCron }}</strong>
-        </div>
-        <div class="miyako-intel-nav__status">
-          <span>缓存维护</span>
-          <strong>{{ status.cache.maintenanceCron }}</strong>
         </div>
         <div class="miyako-intel-nav__status">
           <span>资料搜索缓存</span>
@@ -131,20 +127,16 @@ const mouse = reactive({
 })
 
 const navItems: NavItem[] = [
-  { id: 'site', label: '基础设置', keys: ['baseUrl', 'cacheDirectory', 'refreshCron'] },
-  { id: 'capture', label: 'PRTS 今日情报', keys: ['deviceScaleFactor', 'imageFormat', 'jpegQuality'] },
-  { id: 'text', label: '消息输出', keys: ['messagePrefix', 'summaryMaxItems', 'summaryDatePreview'] },
-  { id: 'theme', label: '外观', keys: ['cardTheme', 'primaryColor', 'textColor'] },
+  { id: 'site', label: '基础设置', keys: ['dailyCardEnabled', 'refreshCron', 'logLevel'] },
   { id: 'push', label: '定时任务', keys: ['scheduledPush', 'channels'] },
-  { id: 'maintenance', label: '缓存维护', keys: ['cacheMaintenance', 'archiveCron'] },
   { id: 'wiki', label: 'Warfarin 资料检索', keys: ['wiki', 'storyBaseUrl', 'searchCacheTtlMs'] },
-  { id: 'advanced', label: '调试与高级', keys: ['logLevel', 'userAgent', 'mode'] },
 ]
 
 const status = ref({
+  daily: { enabled: true, refreshCron: '' },
   push: { enabled: false, channels: 0, cron: '' },
   sites: { prts: '未检查', warfarin: '未检查', story: '未检查' },
-  cache: { refreshCron: '', pushCron: '', maintenanceCron: '', searchTtlMs: 0, searchEntries: 0, searchMaxEntries: 0, searchLabel: '关闭' },
+  cache: { searchTtlMs: 0, searchEntries: 0, searchMaxEntries: 0, searchLabel: '关闭' },
 })
 let statusTimer: number | undefined
 
@@ -152,6 +144,11 @@ const positionStyle = computed(() => ({
   top: `${mouse.top}px`,
   right: `${mouse.right}px`,
 }))
+
+const dailyStatus = computed(() => {
+  if (!status.value.daily.enabled) return '关闭'
+  return status.value.daily.refreshCron || '开启'
+})
 
 const pushStatus = computed(() => {
   if (!status.value.push.enabled) return '关闭'
