@@ -112,14 +112,14 @@ export class WarfarinWikiClient {
       params.set('scope', this.scopes.join(','))
     }
     const response = await this.requestJson<OfficialSearchResponse>(`${officialApiBaseUrl(this.baseUrl, this.language)}/search?${params.toString()}`, { method: 'GET', headers: this.requestHeaders() })
-    const results = (response.results || []).map((item) => ({
+    const results = foldVariantDuplicates((response.results || []).map((item) => ({
       anchor_id: item.slug,
       content: item.snippet || item.name || '',
       source: `${item.category || item.type || '资料'}：${item.name || item.slug}`,
       scope: item.type || 'wiki',
       relevance: Number(item.score || 0),
       url: officialPageUrl(this.pageBaseUrl, this.language, item.type, item.slug),
-    }))
+    })))
     return { results, total: results.length, took_ms: Date.now() - started }
   }
 
@@ -265,6 +265,30 @@ export function clampInteger(value: unknown, fallback: number, min: number, max:
   const numeric = Number(value)
   if (!Number.isFinite(numeric)) return fallback
   return Math.min(max, Math.max(min, Math.trunc(numeric)))
+}
+
+// Warfarin 数据里同一个展示条目常有多个内部 ID（元素/材质/精炼度变体），名称与正文完全相同；
+// 按"来源标签+正文"折叠为一条避免刷屏，标题附变体计数提示，被折叠的 anchor_id 仍可直接查询。
+export function foldVariantDuplicates(results: WarfarinWikiAnchor[]): WarfarinWikiAnchor[] {
+  const groups = new Map<string, { anchor: WarfarinWikiAnchor; variantIds: string[] }>()
+  for (const anchor of results) {
+    const key = `${anchor.source}\n${anchor.content}`
+    const group = groups.get(key)
+    if (!group) {
+      groups.set(key, { anchor, variantIds: [] })
+      continue
+    }
+    group.variantIds.push(anchor.anchor_id.length < group.anchor.anchor_id.length
+      ? group.anchor.anchor_id
+      : anchor.anchor_id)
+    if (anchor.anchor_id.length < group.anchor.anchor_id.length) {
+      group.anchor = anchor
+    }
+  }
+  return Array.from(groups.values()).map(({ anchor, variantIds }) => ({
+    ...anchor,
+    source: variantIds.length ? `${anchor.source}（另有 ${variantIds.length} 个变体）` : anchor.source,
+  }))
 }
 
 function normalizeKeyword(keyword: string) {

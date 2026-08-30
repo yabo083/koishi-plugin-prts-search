@@ -384,7 +384,7 @@ export function apply(ctx: Context, config: RuntimeConfig) {
     if (settled[0].status === 'rejected' && settled[1].status === 'rejected') throw settled[0].reason
     if (settled[0].status === 'rejected') logger.warn(`Warfarin Wiki 官方搜索失败，使用剧情全文结果：${formatError(settled[0].reason)}`)
     if (settled[1].status === 'rejected') logger.warn(`剧情/任务全文搜索失败，使用官方结果：${formatError(settled[1].reason)}`)
-    const results = dedupeWikiResults([...wiki.results, ...story.results])
+    const results = foldCrossSourceDuplicates(dedupeWikiResults([...wiki.results, ...story.results]))
     return { results, total: results.length, took_ms: Math.max(wiki.took_ms, story.took_ms) }
   }
 
@@ -534,14 +534,13 @@ export function apply(ctx: Context, config: RuntimeConfig) {
       return undefined
     }
     try {
-      const sent = await sendOneBotForward(session, messages, resolved.wiki)
+      const sent = await sendOneBotForwardWithRetry(session, messages, resolved.wiki)
       if (sent) return undefined
     } catch (error) {
-      logger.warn(`Warfarin Wiki 合并转发发送失败，回退普通文本：${formatError(error)}`)
+      logger.warn(`Warfarin Wiki 合并转发发送失败，回退普通文本：${sanitizeForwardError(error)}`)
     }
-    if (messages.length === 1) return messages[0]
-    for (const message of messages) await session.send(message)
-    return undefined
+    const [fallback] = buildForwardFallbackMessages(messages)
+    return fallback
   }
 
   function shouldSendWikiForward(session: any) {
@@ -771,7 +770,7 @@ function resolveConfig(config: Partial<RuntimeConfig> = {}): RuntimeConfig {
       mode: config.wiki?.mode || 'official',
       baseUrl: config.wiki?.baseUrl || 'https://api.warfarin.wiki/v1',
       language: config.wiki?.language || 'cn',
-      storyBaseUrl: config.wiki?.storyBaseUrl || 'http://127.0.0.1:3000/api/v1',
+      storyBaseUrl: config.wiki?.storyBaseUrl || 'https://api.warfarin.wiki/v1',
       storyLanguage: config.wiki?.storyLanguage || 'cn',
       storySearchEnabled: config.wiki?.storySearchEnabled ?? true,
       storyDataDirectory: config.wiki?.storyDataDirectory || 'data/miyako-intel/warfarin-story',
@@ -905,6 +904,62 @@ async function sendOneBotForward(session: any, texts: string[], wikiConfig: Runt
     return true
   }
   return false
+}
+
+const forwardRetryDelayMs = 2000
+
+async function sendOneBotForwardWithRetry(session: any, texts: string[], wikiConfig: RuntimeConfig['wiki']) {
+  try {
+    return await sendOneBotForward(session, texts, wikiConfig)
+  } catch (error) {
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, forwardRetryDelayMs))
+    return sendOneBotForward(session, texts, wikiConfig)
+  }
+}
+
+export function buildForwardFallbackMessages(messages: string[]) {
+  if (messages.length <= 1) return messages
+  return [
+    `${messages[0]}\n（合并转发发送失败，已仅发送第 1/${messages.length} 段；可稍后重试获取完整内容。）`,
+  ]
+}
+
+// 官方搜索与本地剧情包描述的是同一个 wiki；同一类型（scope）下标题相同的条目是同一个页面，
+// 合并时保留正文更丰富的一条，避免两个来源各显示一遍。
+export function foldCrossSourceDuplicates(results: SelectedWikiAnchor[]): SelectedWikiAnchor[] {
+  const groups = new Map<string, SelectedWikiAnchor>()
+  for (const item of results) {
+    const key = `${item.scope || ''}\t${wikiSourceTitleKey(item.source)}`
+    const existing = groups.get(key)
+    if (!existing) {
+      groups.set(key, item)
+      continue
+    }
+    if (normalizeWikiFoldText(item.content).length > normalizeWikiFoldText(existing.content).length) {
+      groups.set(key, item)
+    }
+  }
+  return Array.from(groups.values())
+}
+
+function wikiSourceTitleKey(source: string) {
+  const withoutHint = source.replace(/（另有 \d+ 个变体）/g, '')
+  const index = withoutHint.indexOf('：')
+  const label = index >= 0 ? withoutHint.slice(0, index) : ''
+  const title = (index >= 0 ? withoutHint.slice(index + 1) : withoutHint).replace(/\s+/g, '')
+  // 官方与本地对同一页面的类目标签不同（材料 vs 物品信息），归为同一类参与折叠；
+  // "生产蓝图"是插件自设的独立类目，必须与物品本体区分开。
+  const foldClass = label === '生产蓝图' ? '生产蓝图' : '*'
+  return `${foldClass}|${title}`
+}
+
+function normalizeWikiFoldText(text: string) {
+  return String(text || '').replace(/\s+/g, '')
+}
+
+function sanitizeForwardError(error: unknown) {
+  // OneBot 适配器的错误消息会把完整 args（含全部节点正文）拼进 message，日志里只保留动作名。
+  return formatError(error).replace(/, args: [\s\S]*$/, '')
 }
 
 function buildOneBotForwardNodes(texts: string[], wikiConfig: RuntimeConfig['wiki']) {

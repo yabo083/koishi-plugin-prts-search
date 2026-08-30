@@ -580,6 +580,7 @@ test('warfarin wiki official detail uses local snippet without context request',
       ...defaultConfig.wiki,
       mode: 'official',
       baseUrl: 'https://api.warfarin.wiki/v1',
+      storySearchEnabled: false,
       pageSize: undefined,
     },
   })
@@ -591,7 +592,7 @@ test('warfarin wiki official detail uses local snippet without context request',
 
   assert.equal(requests[0].url, 'https://api.warfarin.wiki/v1/cn/search?q=%E6%81%AF%E5%A3%A4')
   assert.equal(requests[0].body, undefined)
-  assert.equal(requests.length, 1)
+  assert.equal(requests.filter((item) => item.url.startsWith('https://api.warfarin.wiki/v1')).length, 1)
   assert.equal(requests.some((item) => item.url.endsWith('/search/context')), false)
   assert.match(detail, /名称：息壤 \| 类型：中枢档案 \| 来源：Warfarin Wiki/)
   assert.match(detail, /https:\/\/warfarin\.wiki\/cn\/lore\/text_v0d8_24/)

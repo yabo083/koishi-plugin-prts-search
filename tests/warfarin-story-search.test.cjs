@@ -767,6 +767,59 @@ test('Warfarin mission parser sorts radio blocks by natural radio id order', () 
   ])
 })
 
+test('story search dedupes identical display entries from different internal item ids', async () => {
+  const { WarfarinStorySearchService } = loadStorySearch()
+  const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'miyako-story-dedupe-'))
+  const anchorsDir = path.join(baseDir, 'story-cache', 'cn', 'anchors')
+  fs.mkdirSync(anchorsDir, { recursive: true })
+  const baseItem = (id) => ({
+    anchor_id: id,
+    content: '紫晶质瓶 由紫晶纤维加工得来的瓶子，可用于其他材料合成。',
+    source: '物品信息：紫晶质瓶',
+    source_ref: '物品信息：紫晶质瓶',
+    scope: 'items',
+    relevance: 1,
+    full_text: [{ speaker: '资料', text: '紫晶质瓶 由紫晶纤维加工得来的瓶子，可用于其他材料合成。' }],
+  })
+  fs.writeFileSync(path.join(anchorsDir, 'bundle.json'), JSON.stringify([
+    baseItem('item_fbottle_glass_acid_0'),
+    baseItem('item_fbottle_glass_xiranite_poly_0'),
+    baseItem('item_glass_bottle_0'),
+    {
+      anchor_id: 'item_glass_bottle_enr_0',
+      content: '充能紫晶质瓶经过强化处理，可以储存更多能量。',
+      source: '物品信息：充能紫晶质瓶',
+      source_ref: '物品信息：充能紫晶质瓶',
+      scope: 'items',
+      relevance: 1,
+      full_text: [{ speaker: '资料', text: '充能紫晶质瓶经过强化处理，可以储存更多能量。' }],
+    },
+    {
+      anchor_id: 'sysbp_tundra_glass_bottle_1_0',
+      content: '紫晶质瓶\n在集成核心区域放置此蓝图后，输入紫晶矿，自动生产紫晶质瓶。',
+      source: '物品信息：紫晶质瓶',
+      source_ref: '物品信息：紫晶质瓶',
+      scope: 'items',
+      relevance: 1,
+      full_text: [{ speaker: '资料', text: '紫晶质瓶\n在集成核心区域放置此蓝图后，输入紫晶矿，自动生产紫晶质瓶。' }],
+    },
+  ]))
+
+  const service = new WarfarinStorySearchService({ baseDir, dataDirectory: 'story-cache', language: 'cn', timeoutMs: 1000, fetch: async () => { throw new Error('dedupe test should not fetch') } })
+  const search = await service.search({ keyword: '紫晶' })
+
+  assert.equal(search.total, 3)
+  assert.equal(search.results[0].anchor_id, 'item_glass_bottle_0')
+  assert.equal(search.results[0].source, '物品信息：紫晶质瓶（另有 2 个变体）')
+  assert.equal(search.results[1].anchor_id, 'item_glass_bottle_enr_0')
+  assert.equal(search.results[1].source, '物品信息：充能紫晶质瓶')
+  assert.equal(search.results[2].anchor_id, 'sysbp_tundra_glass_bottle_1_0')
+  assert.equal(search.results[2].source, '生产蓝图：紫晶质瓶')
+
+  const detail = await service.context({ anchorId: 'sysbp_tundra_glass_bottle_1_0' })
+  assert.equal(detail.source_ref, '生产蓝图：紫晶质瓶')
+})
+
 function jsonResponse(payload) {
   return {
     ok: true,

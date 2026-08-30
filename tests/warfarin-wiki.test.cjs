@@ -42,6 +42,32 @@ test('warfarin wiki client uses official search for accurate totals', async () =
   assert.equal(result.results[0].url, 'https://warfarin.wiki/cn/lore/text_v0d8_24')
 })
 
+test('warfarin wiki client folds identical official entries with variant hint', async () => {
+  const { WarfarinWikiClient } = loadWiki()
+  const snippet = '由紫晶纤维加工得来的瓶子，可用于其他材料合成。'
+  const client = new WarfarinWikiClient({
+    baseUrl: 'https://api.example/v1/cn',
+    mode: 'official',
+    timeoutMs: 1000,
+    fetch: async () => jsonResponse({
+      query: '紫晶',
+      results: [
+        { slug: 'item_fbottle_glass_xiranite_poly', name: '紫晶质瓶', type: 'items', category: '材料', snippet, score: 13 },
+        { slug: 'item_fbottle_glass_acid', name: '紫晶质瓶', type: 'items', category: '材料', snippet, score: 13 },
+        { slug: 'item_glass_bottle', name: '紫晶质瓶', type: 'items', category: '材料', snippet, score: 13 },
+        { slug: 'item_quartz_powder', name: '紫晶粉末', type: 'items', category: '材料', snippet: '紫晶纤维粉碎后的粉末。', score: 23 },
+      ],
+    }),
+  })
+
+  const result = await client.search({ keyword: '紫晶' })
+
+  assert.equal(result.total, 2)
+  assert.equal(result.results[0].anchor_id, 'item_glass_bottle')
+  assert.equal(result.results[0].source, '材料：紫晶质瓶（另有 2 个变体）')
+  assert.equal(result.results[1].source, '材料：紫晶粉末')
+})
+
 test('warfarin wiki client uses configured official language for api and page links', async () => {
   const { WarfarinWikiClient } = loadWiki()
   const calls = []

@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { isAbsolute, join, resolve } from 'node:path'
 import { gunzipSync } from 'node:zlib'
-import { WarfarinWikiAnchor, WarfarinWikiContextResult, WarfarinWikiSearchResult } from './warfarin-wiki'
+import { WarfarinWikiAnchor, WarfarinWikiContextResult, WarfarinWikiSearchResult, foldVariantDuplicates } from './warfarin-wiki'
 import { bundledStorySeedCount, bundledStorySeedLanguage, bundledStorySeedVersion, loadBundledStorySeed } from './warfarin-story-seed'
 
 export interface WarfarinStorySearchOptions {
@@ -82,17 +82,23 @@ export class WarfarinStorySearchService {
     if (!keyword) return { results: [], total: 0, took_ms: 0 }
     const started = Date.now()
     const needle = keyword.toLowerCase()
-    const results = this.anchors
+    const scored = this.anchors
       .map((anchor) => ({ anchor, score: scoreStoryAnchor(anchor, needle) }))
       .filter((item) => item.score > 0)
       .sort((a, b) => b.score - a.score)
-      .map(({ anchor, score }) => ({
-        anchor_id: anchor.anchor_id,
-        content: excerptAroundKeyword(anchor.content, keyword, 160),
-        source: anchor.source,
-        scope: anchor.scope,
-        relevance: score,
-      }))
+    // 与官方搜索共用折叠规则：同"来源标签+正文"的变体折叠为一条并提示数量，不静默丢弃。
+    const folded = foldVariantDuplicates(scored.map(({ anchor, score }) => ({
+      ...anchor,
+      source: displayStorySource(anchor),
+      relevance: score,
+    })))
+    const results = folded.map((item) => ({
+      anchor_id: item.anchor_id,
+      content: excerptAroundKeyword(item.content, keyword, 160),
+      source: item.source,
+      scope: item.scope,
+      relevance: item.relevance,
+    }))
     return { results, total: results.length, took_ms: Date.now() - started }
   }
 
@@ -101,10 +107,10 @@ export class WarfarinStorySearchService {
     const anchor = this.anchors.find((item) => item.anchor_id === input.anchorId)
     if (!anchor) throw new Error(`anchor_id '${input.anchorId}' not found`)
     return {
-      anchor,
+      anchor: { ...anchor, source: displayStorySource(anchor) },
       full_text: anchor.full_text,
       summary: null,
-      source_ref: anchor.source_ref || anchor.source,
+      source_ref: displayStorySource(anchor) || anchor.source_ref,
     }
   }
 
@@ -447,6 +453,14 @@ function scoreStoryAnchor(anchor: StoryAnchor, needle: string) {
   if (source.includes(needle)) return 100
   if (content.includes(needle)) return 50
   return 0
+}
+
+// 蓝图条目（"放置此蓝图后，输入…自动生产…"）与物品本体同名同标签，展示层区分为"生产蓝图"。
+function displayStorySource(anchor: StoryAnchor) {
+  if (anchor.scope === 'items' && /放置此蓝图后/.test(anchor.content || '')) {
+    return anchor.source.replace(/^物品信息：/, '生产蓝图：')
+  }
+  return anchor.source
 }
 
 function isStoryAnchor(value: any): value is StoryAnchor {
