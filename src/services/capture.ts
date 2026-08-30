@@ -8,7 +8,13 @@ export const DAILY_CAPTURE_ID = 'prts-capture-daily-v2'
 const QQ_IMAGE_MAX_BYTES = 2 * 1024 * 1024
 
 export function normalizeHeadingText(input: string) {
-  return input.replace(/[\s ]+/g, ' ').trim()
+  return input.replace(/[\s  ]+/g, ' ').trim()
+}
+
+// MediaWiki 升级后标题被 <div class="mw-heading"> 包装，标题元素的 nextElementSibling 变成 null；
+// 章节正文挂在包装层之后。旧结构（标题直接是正文兄弟节点）也要兼容。
+export function resolveHeadingBodyAnchor(titleHost: any) {
+  return titleHost?.closest?.('.mw-heading') || titleHost
 }
 
 export function parseRefreshHours(text: string) {
@@ -585,6 +591,13 @@ export class PrtsCaptureService {
       const result = await page.evaluate((payload: { captureId: string; styles: string }) => {
         const parser = {
           normalizeHeadingText: (input: string) => input.replace(/[\s ]+/g, ' ').trim(),
+          resolveHeadingBodyAnchor: (titleHost: any) => {
+            try {
+              return titleHost?.closest?.('.mw-heading') || titleHost
+            } catch {
+              return titleHost
+            }
+          },
           parseRefreshHours: (text: string) => {
             const day = Number((text.match(/(\d+)\s*天/) || [0, 0])[1])
             const hour = Number((text.match(/(\d+)\s*小时/) || [0, 0])[1])
@@ -690,7 +703,8 @@ export class PrtsCaptureService {
             if (text !== name) continue
             const titleHost = node.closest('h1,h2,h3,h4') || node.parentElement
             if (!titleHost) return null
-            let body = titleHost.nextElementSibling
+            const bodyHost = parser.resolveHeadingBodyAnchor(titleHost)
+            let body = bodyHost.nextElementSibling
             while (body && body.tagName === 'HR') body = body.nextElementSibling
             return { titleHost, body }
           }
@@ -702,6 +716,8 @@ export class PrtsCaptureService {
           let current = start
           while (current) {
             if (/^H[1-4]$/.test(current.tagName)) break
+            // MediaWiki 升级后标题被 div.mw-heading 包装，标题不再是正文的兄弟节点，需要按包装层截断。
+            if (current.classList?.contains('mw-heading')) break
             blocks.push(current)
             current = current.nextElementSibling
           }
@@ -710,9 +726,10 @@ export class PrtsCaptureService {
 
         const todayAnchor = document.getElementById('今日信息_2')
         const todayTitleHost = todayAnchor?.closest('h1,h2,h3,h4') || todayAnchor?.parentElement || byHeading('今日信息')?.titleHost || null
+        const todayBodyHost = todayTitleHost ? parser.resolveHeadingBodyAnchor(todayTitleHost) : null
         const todayBodies = (() => {
-          if (!todayTitleHost) return []
-          const blocks = collectBodiesUntilHeading(todayTitleHost.nextElementSibling)
+          if (!todayBodyHost) return []
+          const blocks = collectBodiesUntilHeading(todayBodyHost.nextElementSibling)
           if (blocks.length) return blocks
           const fallback = document.querySelector('.mp-today')
           return fallback ? [fallback] : []

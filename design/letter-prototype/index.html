@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>明日方舟 · 今日信笺</title>
+<link rel="stylesheet" href="./node_modules/lxgw-wenkai-lite-webfont/lxgwwenkailite-regular.css">
+<link rel="stylesheet" href="./node_modules/lxgw-wenkai-lite-webfont/lxgwwenkailite-bold.css">
+<link rel="stylesheet" href="./node_modules/@fontsource/zhi-mang-xing/index.css">
+<link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+<main class="letter" id="letter">
+
+  <!-- ============ 信纸抬头 ============ -->
+  <header class="letter-head">
+    <div class="tape tape--head"></div>
+    <div class="letter-head-text">
+      <p class="letter-brand">ARKNIGHTS · DAILY LETTER</p>
+      <h1 class="letter-title">今日信笺</h1>
+    </div>
+    <div class="letter-date">
+      <span class="letter-date-day">8月30日</span>
+      <span class="letter-date-week">星期六</span>
+    </div>
+    <!-- 印章：田字格「今日」，款式与坐标来自 helper.html 摆放数据 -->
+    <div class="stamp-item" style="left: 1038px; top: -23px; width: 120px; transform: rotate(-13deg);">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <defs><filter id="rough-stamp" x="-10%" y="-10%" width="120%" height="120%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.55" numOctaves="2" result="n"/>
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
+        </filter></defs>
+        <g filter="url(#rough-stamp)">
+          <rect x="5" y="5" width="90" height="90" rx="7" fill="none" stroke="#c34a3a" stroke-width="4.5"/>
+          <path d="M 50 8 V 92 M 8 50 H 92" stroke="#c34a3a" stroke-width="1.2" stroke-dasharray="4 4" opacity="0.65"/>
+          <text x="71" y="29" text-anchor="middle" dominant-baseline="central" font-family="'LXGW WenKai Lite','KaiTi',serif" font-weight="700" font-size="27" fill="#c34a3a">今</text>
+          <text x="29" y="72" text-anchor="middle" dominant-baseline="central" font-family="'LXGW WenKai Lite','KaiTi',serif" font-weight="700" font-size="27" fill="#c34a3a">日</text>
+        </g>
+      </svg>
+    </div>
+  </header>
+
+  <!-- ============ 手写区：今日收集 ============ -->
+  <section class="section section--collect">
+    <h2 class="hand-heading"><span class="hand-doodle">✎</span> 今天可以收集</h2>
+    <div class="handwriting collect-block">
+      <p class="collect-line">今日资源收集，别忘了刷一遍——</p>
+      <ul class="collect-list">
+        <li class="collect-item collect-item--checked">
+          <span class="checkbox"></span>物资筹备分区：
+          <b>作战记录 · 采购凭证 · 龙门币 · 技巧概要</b>
+        </li>
+        <li class="collect-item collect-item--checked">
+          <span class="checkbox"></span>芯片搜索分区：
+          <b>医疗&amp;重装 · 近卫&amp;特种 · 先锋&amp;辅助 职业芯片(组)</b>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ 标准字体区：核心动态 ============ -->
+  <section class="section section--core">
+    <h2 class="print-heading">核心动态<span class="print-heading-en">ACTIVE</span></h2>
+    <ul class="core-list">
+      <li class="core-item core-item--warn">
+        <span class="core-dot"></span>
+        <div class="core-text">
+          剿灭作战 &amp; 周常任务（含特勤任务）
+          <span class="core-count">7小时17分钟后</span>刷新
+        </div>
+      </li>
+      <li class="core-item core-item--danger">
+        <span class="core-dot"></span>
+        <div class="core-text">
+          活动『<b>墟·复刻</b>』
+          <span class="core-count">1天7小时16分钟后</span>结束
+        </div>
+      </li>
+      <li class="core-item core-item--danger">
+        <span class="core-dot"></span>
+        <div class="core-text">
+          限时寻访『<b>联合行动23</b>』
+          <span class="core-count">1天7小时16分钟后</span>结束
+        </div>
+      </li>
+    </ul>
+  </section>
+
+  <!-- ============ 手账贴画区：生日干员 ============ -->
+  <section class="section section--birthday">
+    <h2 class="hand-heading"><span class="hand-doodle">🎂</span> 今天生日</h2>
+    <div class="collage" id="collage">
+      <!-- 贴画由 JS 排版：20% 重叠、满一行自动换行、逐行居中 -->
+    </div>
+    <p class="collage-note handwriting">—— 祝四位干员生日快乐，罗德岛请客吃蛋糕 ──</p>
+  </section>
+
+  <!-- ============ 标准字体区：近期新增 ============ -->
+  <section class="section section--recent">
+    <h2 class="print-heading">近期新增<span class="print-heading-en">RECENT</span></h2>
+    <div class="recent-group">
+      <p class="recent-label">近期新增干员</p>
+      <div class="recent-chips" data-group="recent"></div>
+    </div>
+    <div class="recent-group">
+      <p class="recent-label">凭证兑换 / 中坚甄选</p>
+      <div class="recent-chips" data-group="pool"></div>
+    </div>
+    <div class="recent-group">
+      <p class="recent-label">新增关卡</p>
+      <p class="recent-stage">SideStory「直到大地变成一颗酸橙」 · 踏上归家长途（TO-EX-1 ~ TO-EX-8 / TO-S-1 ~ TO-S-4）</p>
+    </div>
+  </section>
+
+  <!-- ============ 落款 ============ -->
+  <footer class="letter-foot">
+    <span>信息源：prts.wiki</span>
+    <span>生成者：miyako-intel</span>
+    <span class="handwriting letter-sign">—— 裁纸为笺，见字如面</span>
+  </footer>
+
+</main>
+<script src="./js/data.js"></script>
+<script src="./js/render.js"></script>
+</body>
+</html>

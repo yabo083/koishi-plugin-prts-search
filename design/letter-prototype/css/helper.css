@@ -1,0 +1,84 @@
+/* 印章摆放 helper 页 */
+body {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  padding: 20px 28px;
+}
+
+.helper-panel {
+  flex: none;
+  width: 300px;
+  position: sticky;
+  top: 20px;
+  padding: 16px 18px;
+  background: #fffdf8;
+  border: 1px solid rgba(64, 56, 46, 0.16);
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(64, 56, 46, 0.12);
+}
+.helper-title {
+  font-family: var(--hand);
+  font-size: 22px;
+  margin-bottom: 6px;
+}
+.helper-tip { font-size: 12px; color: var(--ink-soft); line-height: 1.7; margin-bottom: 10px; }
+.helper-tip--small { margin: 8px 0 0; font-size: 11px; }
+.helper-label { font-size: 12px; letter-spacing: 0.18em; color: var(--ink-soft); margin: 12px 0 8px; }
+
+.palette { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.palette-item {
+  cursor: grab;
+  padding: 8px;
+  background: var(--paper);
+  border: 1px dashed rgba(64, 56, 46, 0.3);
+  border-radius: 8px;
+  text-align: center;
+  user-select: none;
+}
+.palette-item:active { cursor: grabbing; }
+.palette-item svg { width: 64px; height: auto; display: block; margin: 0 auto; }
+.palette-item--wide svg { width: 92px; }
+.palette-item figcaption { font-size: 11px; color: var(--ink-soft); margin-top: 5px; }
+
+.helper-controls { margin-top: 4px; }
+.helper-controls label { display: block; font-size: 12px; color: var(--ink); margin-bottom: 8px; }
+.helper-controls input[type="range"] { width: 100%; accent-color: var(--red); }
+.helper-btns { display: flex; gap: 8px; margin: 8px 0; }
+.helper-btns button {
+  flex: 1;
+  padding: 6px 10px;
+  font-size: 13px;
+  cursor: pointer;
+  background: #fff;
+  border: 1px solid rgba(64, 56, 46, 0.3);
+  border-radius: 6px;
+}
+.helper-btns button:disabled { opacity: 0.45; cursor: default; }
+#output {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: Consolas, monospace;
+  font-size: 11px;
+  color: var(--ink);
+  border: 1px solid rgba(64, 56, 46, 0.25);
+  border-radius: 6px;
+  background: var(--paper);
+  resize: vertical;
+}
+
+.helper-workspace { flex: 1; min-width: 0; }
+.helper-workspace .letter { margin: 0; }
+.letter-head { touch-action: none; }
+
+/* 已放置的印章 */
+.stamp-item {
+  position: absolute;
+  cursor: grab;
+  user-select: none;
+  filter: drop-shadow(0 2px 3px rgba(64, 56, 46, 0.25));
+  opacity: 0.88;
+}
+.stamp-item:active { cursor: grabbing; }
+.stamp-item svg { display: block; width: 100%; height: auto; pointer-events: none; }
+.stamp-item--selected { outline: 1.5px dashed rgba(79, 133, 120, 0.8); outline-offset: 4px; }

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>印章摆放 helper</title>
+<link rel="stylesheet" href="./node_modules/lxgw-wenkai-lite-webfont/lxgwwenkailite-regular.css">
+<link rel="stylesheet" href="./node_modules/lxgw-wenkai-lite-webfont/lxgwwenkailite-bold.css">
+<link rel="stylesheet" href="./css/style.css">
+<link rel="stylesheet" href="./css/helper.css">
+</head>
+<body>
+
+<aside class="helper-panel">
+  <h1 class="helper-title">印章摆放 helper</h1>
+  <p class="helper-tip">把下面的印章<b>拖到信纸抬头</b>上；点选后可拖动位置、滚轮缩放、滑杆微调旋转/缩放。</p>
+
+  <p class="helper-label">印章款式</p>
+  <div class="palette" id="palette"></div>
+
+  <div class="helper-controls">
+    <label>旋转 <span id="rot-val">-7</span>°
+      <input type="range" id="rot" min="-45" max="45" step="1" value="-7" disabled>
+    </label>
+    <label>缩放 <span id="scale-val">1.00</span>×
+      <input type="range" id="scale" min="0.4" max="2.5" step="0.02" value="1" disabled>
+    </label>
+    <div class="helper-btns">
+      <button id="delete" disabled>删除选中</button>
+      <button id="clear">清空</button>
+    </div>
+  </div>
+
+  <p class="helper-label">摆放数据（摆好后点复制发我）</p>
+  <textarea id="output" readonly placeholder="[]" rows="6"></textarea>
+  <div class="helper-btns">
+    <button id="copy">复制 JSON</button>
+  </div>
+  <p class="helper-tip helper-tip--small">坐标为相对信纸抬头左上角的像素，width 为印章显示宽度。</p>
+</aside>
+
+<main class="helper-workspace">
+  <div class="letter" id="letter">
+    <header class="letter-head" id="header">
+      <div class="tape tape--head"></div>
+      <div class="letter-head-text">
+        <p class="letter-brand">ARKNIGHTS · DAILY LETTER</p>
+        <h1 class="letter-title">今日信笺</h1>
+      </div>
+      <div class="letter-date">
+        <span class="letter-date-day">8月30日</span>
+        <span class="letter-date-week">星期六</span>
+      </div>
+    </header>
+    <section class="section"><p class="handwriting" style="font-size:20px;color:var(--ink-soft)">（信纸正文占位 —— 只需关心抬头区域）</p></section>
+    <footer class="letter-foot"><span>信息源：prts.wiki</span></footer>
+  </div>
+</main>
+
+<script src="./js/data.js"></script>
+<script src="./js/stamp-designs.js"></script>
+<script src="./js/helper.js"></script>
+</body>
+</html>

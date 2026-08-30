@@ -19,7 +19,25 @@ const {
   shouldRemoveFromStatusColumn,
   extractOperatorNamesFromHtml,
   extractOperatorSummaryItemsFromHtml,
+  resolveHeadingBodyAnchor,
 } = require('../lib/services/capture.js')
+
+function makeFakeElement({ classes = '', parent = null } = {}) {
+  const element = {
+    className: classes,
+    parentElement: parent,
+    closest(selector) {
+      if (selector !== '.mw-heading') return null
+      let node = element
+      while (node) {
+        if (String(node.className || '').split(/\s+/).includes('mw-heading')) return node
+        node = node.parentElement
+      }
+      return null
+    },
+  }
+  return element
+}
 
 test('parseRefreshHours parses day+hour+minute text', () => {
   const h = parseRefreshHours('1天15小时34分钟后刷新')
@@ -39,6 +57,27 @@ test('getCountdownUrgencyClass maps remaining hours to visual urgency', () => {
 
 test('normalizeHeadingText trims extra spaces', () => {
   assert.equal(normalizeHeadingText('  亮点干员  '), '亮点干员')
+})
+
+test('resolveHeadingBodyAnchor crosses MediaWiki mw-heading wrapper (2026-08 PRTS structure)', () => {
+  const content = makeFakeElement({ classes: 'mp-operators' })
+  const wrapper = makeFakeElement({ classes: 'mw-heading mw-heading2' })
+  wrapper.nextElementSibling = content
+  const h2 = makeFakeElement({ parent: wrapper })
+  h2.nextElementSibling = null
+
+  const anchor = resolveHeadingBodyAnchor(h2)
+  assert.equal(anchor, wrapper)
+  assert.equal(anchor.nextElementSibling, content)
+})
+
+test('resolveHeadingBodyAnchor keeps legacy heading as its own body anchor', () => {
+  const h2 = makeFakeElement()
+  h2.nextElementSibling = makeFakeElement({ classes: 'mp-operators' })
+
+  const anchor = resolveHeadingBodyAnchor(h2)
+  assert.equal(anchor, h2)
+  assert.equal(anchor.nextElementSibling.className, 'mp-operators')
 })
 
 test('isNoiseNodeText catches static-image noise labels', () => {
