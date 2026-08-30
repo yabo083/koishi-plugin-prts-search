@@ -23,9 +23,17 @@ export interface DailyBirthdayOperator {
   tape: string
 }
 
+export interface SealSlot {
+  ch: string
+  x: number
+  y: number
+}
+
 export interface DailyCardData {
   dateText: string
   weekText: string
+  sealSlots: SealSlot[]
+  capturedAtText: string
   collectIntro: string
   collectMaterial: string[]
   collectChips: string[]
@@ -36,8 +44,17 @@ export interface DailyCardData {
   stageLine: string
 }
 
-const STAMP_SVG = `
-<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+const SEAL_SLOT_XY: Record<string, { x: number; y: number }> = {
+  // 传统四字印读序：右列上下 → 左列上下
+  '0': { x: 71, y: 29 },
+  '1': { x: 71, y: 71 },
+  '2': { x: 29, y: 29 },
+  '3': { x: 29, y: 71 },
+}
+
+function stampSvg(slots: SealSlot[]) {
+  const texts = slots.map((slot) => `<text x="${slot.x}" y="${slot.y}" text-anchor="middle" dominant-baseline="central" font-family="'LXGW WenKai Lite','KaiTi',serif" font-weight="700" font-size="21" fill="#c34a3a">${slot.ch}</text>`).join('')
+  return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
   <defs><filter id="rough-stamp" x="-10%" y="-10%" width="120%" height="120%">
     <feTurbulence type="fractalNoise" baseFrequency="0.55" numOctaves="2" result="n"/>
     <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6"/>
@@ -45,11 +62,10 @@ const STAMP_SVG = `
   <g filter="url(#rough-stamp)">
     <rect x="5" y="5" width="90" height="90" rx="7" fill="none" stroke="#c34a3a" stroke-width="4.5"/>
     <path d="M 50 8 V 92 M 8 50 H 92" stroke="#c34a3a" stroke-width="1.2" stroke-dasharray="4 4" opacity="0.65"/>
-    <text x="71" y="29" text-anchor="middle" dominant-baseline="central" font-family="'LXGW WenKai Lite','KaiTi',serif" font-weight="700" font-size="27" fill="#c34a3a">今</text>
-    <text x="29" y="72" text-anchor="middle" dominant-baseline="central" font-family="'LXGW WenKai Lite','KaiTi',serif" font-weight="700" font-size="27" fill="#c34a3a">日</text>
+    ${texts}
   </g>
 </svg>`
-
+}
 const CARD_CSS = `
 :root {
   --paper: #f8f3e7;
@@ -121,7 +137,7 @@ body { font-family: var(--print); color: var(--ink); }
 .recent-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip { padding: 5px 14px; font-size: 14px; background: rgba(255,255,255,.6); border: 1px solid rgba(64,56,46,.16); border-radius: 999px; }
 .chip--operator { position: relative; display: inline-block; padding: 2px 18px 7px; font-family: "Zhi Mang Xing", var(--hand); font-size: 23px; line-height: 1.3; color: var(--ink); background: color-mix(in srgb, var(--rarity-color, var(--ink)) 8%, rgba(255,255,255,.55)); border: 1.5px solid color-mix(in srgb, var(--rarity-color, var(--ink)) 78%, transparent); border-radius: 999px; }
-.chip-stars { position: absolute; right: 12px; bottom: 0; transform: translateY(50%); font-style: normal; font-family: var(--print); font-size: 9px; letter-spacing: 1px; color: #e8b93c; background: var(--paper); padding: 0 5px; border-radius: 6px; }
+.chip-stars { position: absolute; right: 3px; bottom: -6px; display: flex; flex-wrap: wrap; justify-content: flex-end; align-content: flex-start; width: 44px; max-height: 22px; font-style: normal; font-family: var(--print); font-size: 8px; line-height: 1.15; letter-spacing: 1px; color: #e8b93c; background: var(--paper); border: 1px solid rgba(64,56,46,.18); border-radius: 8px; padding: 0 4px; }
 .recent-stage { font-size: 14px; line-height: 1.6; }
 .letter-foot { display: flex; align-items: baseline; gap: 26px; padding-top: 14px; border-top: 1px solid rgba(64,56,46,.2); font-size: 12px; color: var(--ink-soft); }
 .letter-sign { margin-left: auto; font-size: 16px; }
@@ -200,6 +216,15 @@ const LAYOUT_SCRIPT = `
 })();
 `
 
+// 农历日期印章：如「七月初九」→ 右上七、右下月、左上初、左下九
+export function buildSealSlots(date: Date): SealSlot[] {
+  // 库按本地时区解析，先平移到东八区墙钟
+  const shifted = new Date(date.getTime() + (480 + date.getTimezoneOffset()) * 60000)
+  const lunar = (require('lunar-javascript') as any).Lunar.fromDate(shifted)
+  const leap = lunar.getMonth() < 0
+  const text = (leap ? '闰' : lunar.getMonthInChinese() + '月') + lunar.getDayInChinese()
+  return Array.from(text).slice(0, 4).map((ch, index) => ({ ch, ...SEAL_SLOT_XY[String(index)] }))
+}
 function escapeHtml(text: string) {
   return String(text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
@@ -241,6 +266,13 @@ export function renderCardHtml(data: DailyCardData, options: { fontsCssLinks: st
     <p class="collage-note handwriting">—— 祝${data.birthdays.length}位干员生日快乐，罗德岛请客吃蛋糕 ──</p>`
     : ''
 
+  const birthdaySection = data.birthdays.length
+    ? `
+  <section class="section section--birthday">
+    <h2 class="hand-heading"><span class="hand-doodle">🎂</span> 今天生日<span class="print-heading-en">${escapeHtml(data.dateText)}</span></h2>
+    <div class="collage" id="collage"></div>${birthdayNote}
+  </section>`
+    : ''
   return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -261,7 +293,7 @@ ${options.fontsCssLinks}
       <span class="letter-date-day">${escapeHtml(data.dateText)}</span>
       <span class="letter-date-week">${escapeHtml(data.weekText)}</span>
     </div>
-    <div class="stamp-item" style="left: 1038px; top: -23px; width: 120px; transform: rotate(-13deg);">${STAMP_SVG}</div>
+    <div class="stamp-item" style="left: 1072px; top: -30px; width: 96px; transform: rotate(-13deg);">${stampSvg(data.sealSlots)}</div>
   </header>
 
   <section class="section section--collect">
@@ -279,10 +311,7 @@ ${options.fontsCssLinks}
     </ul>
   </section>
 
-  <section class="section section--birthday">
-    <h2 class="hand-heading"><span class="hand-doodle">🎂</span> 今天生日</h2>
-    <div class="collage" id="collage"></div>${birthdayNote}
-  </section>
+${birthdaySection}
 
   <section class="section section--recent">
     <h2 class="print-heading">近期新增<span class="print-heading-en">RECENT</span></h2>
@@ -297,6 +326,7 @@ ${options.fontsCssLinks}
   </section>
 
   <footer class="letter-foot">
+    <span>抓取时间：${escapeHtml(data.capturedAtText)}</span>
     <span>信息源：prts.wiki</span>
     <span>生成者：miyako-intel</span>
     <span class="handwriting letter-sign">—— 裁纸为笺，见字如面</span>

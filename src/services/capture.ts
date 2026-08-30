@@ -5,7 +5,7 @@ import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { h } from 'koishi'
 import { CachedImageResult, CaptureKind } from '../types'
-import { DailyCardData, DailyCoreItem, DailyOperator, renderCardHtml } from './card-template'
+import { DailyCardData, DailyCoreItem, DailyOperator, SealSlot, buildSealSlots, renderCardHtml } from './card-template'
 import { DailyImageCache, getZonedParts } from './cache'
 import { matchesCronExpression } from './cron'
 
@@ -198,6 +198,8 @@ export function mapRawToDailyCard(raw: RawDailyData, options: { now: Date }): Da
     dateText: `${parts.month}月${parts.day}日`,
     weekText: `星期${WEEKDAY_LABELS[parts.weekday]}`,
     collectIntro: '今日资源收集，别忘了刷一遍——',
+    sealSlots: buildSealSlots(options.now) as SealSlot[],
+    capturedAtText: [String(parts.hour).padStart(2, '0'), String(parts.minute).padStart(2, '0')].join(':'),
     collectMaterial: splitCollectValues(materialMatch?.[1] || ''),
     collectChips: splitCollectValues(chipMatch?.[1] || ''),
     core: raw.coreItems

@@ -135,3 +135,13 @@ test('renderCardHtml omits font links when font assets are missing', () => {
   const html = renderCardHtml(mapRawToDailyCard(RAW_FIXTURE, { now: NOW }), { fontsCssLinks: '' })
   assert.doesNotMatch(html, /fonts\/lxgw/)
 })
+
+test('buildSealSlots lays lunar date chars into the seal grid', () => {
+  const { buildSealSlots } = require('../lib/services/card-template.js')
+  const slots = buildSealSlots(new Date('2026-08-30T20:00:00+08:00'))
+
+  // 2026-08-30 农历七月十八：右列上下「七月」，左列上下「十八」
+  assert.equal(slots.length, 4)
+  assert.deepEqual(slots.map((slot) => slot.ch), ['七', '月', '十', '八'])
+  assert.deepEqual(slots.map((slot) => [slot.x, slot.y]), [[71, 29], [71, 71], [29, 29], [29, 71]])
+})
