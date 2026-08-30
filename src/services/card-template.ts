@@ -147,9 +147,9 @@ body { font-family: var(--print); color: var(--ink); }
 .recent-label { font-size: 12px; letter-spacing: .22em; color: var(--ink-soft); margin-bottom: 8px; }
 .recent-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip { padding: 5px 14px; font-size: 14px; background: rgba(255,255,255,.6); border: 1px solid rgba(64,56,46,.16); border-radius: 999px; }
-/* 干员胶囊：稀有度色框 + 底色淡染；星星为悬挂在右下角的独立小胶囊（omp 状态条式） */
-.chip--operator { position: relative; display: inline-block; padding: 2px 20px 7px; font-family: "Zhi Mang Xing", var(--hand); font-size: 23px; line-height: 1.3; color: var(--ink); background: color-mix(in srgb, var(--rarity-color, var(--ink)) 8%, rgba(255,255,255,.55)); border: 1.5px solid color-mix(in srgb, var(--rarity-color, var(--ink)) 78%, transparent); border-radius: 999px; }
-.chip-stars { position: absolute; right: -10px; bottom: -12px; display: inline-flex; align-items: center; font-style: normal; font-family: var(--print); font-size: 9px; line-height: 1; letter-spacing: 2px; color: #e8b93c; background: #fffdf8; border: 1.5px solid color-mix(in srgb, var(--rarity-color, var(--ink)) 55%, transparent); border-radius: 999px; padding: 3px 8px 3px 10px; box-shadow: 0 1px 3px rgba(64,56,46,.18); }
+/* 干员胶囊：稀有度色框；星星以极简角注形式置于右下（V12） */
+.chip--operator { position: relative; display: inline-block; padding: 2px 40px 4px 22px; font-family: "Zhi Mang Xing", var(--hand); font-size: 23px; line-height: 1.3; color: var(--ink); background: color-mix(in srgb, var(--rarity-color, var(--ink)) 6%, rgba(255,255,255,.5)); border: 1.5px solid color-mix(in srgb, var(--rarity-color, var(--ink)) 78%, transparent); border-radius: 999px; }
+.chip-stars { position: absolute; right: 12px; bottom: 2px; font-style: normal; font-family: var(--print); font-size: 9.5px; letter-spacing: 1px; color: color-mix(in srgb, #e8b93c 80%, var(--ink) 20%); opacity: .9; }
 .recent-stage { font-size: 14px; line-height: 1.6; }
 .letter-foot { display: flex; align-items: baseline; gap: 26px; padding-top: 14px; border-top: 1px solid rgba(64,56,46,.2); font-size: 12px; color: var(--ink-soft); }
 .letter-sign { margin-left: auto; font-size: 16px; }
