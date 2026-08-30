@@ -1,5 +1,11 @@
 // 「今日信笺」卡片渲染：数据 → 完整 HTML（file:// 加载后截图 #letter）
-// 版式与 design/letter-prototype 保持一致；字体从渲染目录的 ./fonts/ 相对引用。
+// 版式与 design/letter-prototype 保持一致；字体从渲染目录的字体文件相对引用。
+
+export interface SealSlot {
+  ch: string
+  x: number
+  y: number
+}
 
 export interface DailyCoreItem {
   name: string
@@ -17,16 +23,10 @@ export interface DailyBirthdayOperator {
   name: string
   /** 首页头像直链，立绘抓取失败时的兜底 */
   avatar: string
-  /** base64 数据 URL；抓取失败时为空串，模板退化为无名框 */
+  /** base64 数据 URL；抓取失败时为空串 */
   art: string
   tilt: number
   tape: string
-}
-
-export interface SealSlot {
-  ch: string
-  x: number
-  y: number
 }
 
 export interface DailyCardData {
@@ -44,8 +44,18 @@ export interface DailyCardData {
   stageLine: string
 }
 
+// 农历日期印章：如「七月初九」→ 右上七、右下月、左上初、左下九（传统右起竖读）
+export function buildSealSlots(date: Date): SealSlot[] {
+  // lunar-javascript 按本地时区解析，先平移到东八区墙钟
+  const shifted = new Date(date.getTime() + (480 + date.getTimezoneOffset()) * 60000)
+  const lunar = (require('lunar-javascript') as any).Lunar.fromDate(shifted)
+  const leap = lunar.getMonth() < 0
+  const text = (leap ? '闰' : lunar.getMonthInChinese() + '月') + lunar.getDayInChinese()
+  const positions = [[71, 29], [71, 71], [29, 29], [29, 71]]
+  return Array.from(text).slice(0, 4).map((ch, index) => ({ ch, x: positions[index][0], y: positions[index][1] }))
+}
+
 const SEAL_SLOT_XY: Record<string, { x: number; y: number }> = {
-  // 传统四字印读序：右列上下 → 左列上下
   '0': { x: 71, y: 29 },
   '1': { x: 71, y: 71 },
   '2': { x: 29, y: 29 },
@@ -53,7 +63,7 @@ const SEAL_SLOT_XY: Record<string, { x: number; y: number }> = {
 }
 
 function stampSvg(slots: SealSlot[]) {
-  const texts = slots.map((slot) => `<text x="${slot.x}" y="${slot.y}" text-anchor="middle" dominant-baseline="central" font-family="'LXGW WenKai Lite','KaiTi',serif" font-weight="700" font-size="21" fill="#c34a3a">${slot.ch}</text>`).join('')
+  const texts = slots.map((slot) => `<text x="${slot.x}" y="${slot.y}" text-anchor="middle" dominant-baseline="central" font-family="'LXGW WenKai Lite','KaiTi',serif" font-weight="700" font-size="23" fill="#c34a3a">${slot.ch}</text>`).join('')
   return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
   <defs><filter id="rough-stamp" x="-10%" y="-10%" width="120%" height="120%">
     <feTurbulence type="fractalNoise" baseFrequency="0.55" numOctaves="2" result="n"/>
@@ -66,6 +76,7 @@ function stampSvg(slots: SealSlot[]) {
   </g>
 </svg>`
 }
+
 const CARD_CSS = `
 :root {
   --paper: #f8f3e7;
@@ -136,8 +147,9 @@ body { font-family: var(--print); color: var(--ink); }
 .recent-label { font-size: 12px; letter-spacing: .22em; color: var(--ink-soft); margin-bottom: 8px; }
 .recent-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip { padding: 5px 14px; font-size: 14px; background: rgba(255,255,255,.6); border: 1px solid rgba(64,56,46,.16); border-radius: 999px; }
-.chip--operator { position: relative; display: inline-block; padding: 2px 18px 7px; font-family: "Zhi Mang Xing", var(--hand); font-size: 23px; line-height: 1.3; color: var(--ink); background: color-mix(in srgb, var(--rarity-color, var(--ink)) 8%, rgba(255,255,255,.55)); border: 1.5px solid color-mix(in srgb, var(--rarity-color, var(--ink)) 78%, transparent); border-radius: 999px; }
-.chip-stars { position: absolute; right: 3px; bottom: -6px; display: flex; flex-wrap: wrap; justify-content: flex-end; align-content: flex-start; width: 44px; max-height: 22px; font-style: normal; font-family: var(--print); font-size: 8px; line-height: 1.15; letter-spacing: 1px; color: #e8b93c; background: var(--paper); border: 1px solid rgba(64,56,46,.18); border-radius: 8px; padding: 0 4px; }
+/* 干员胶囊：稀有度色框 + 底色淡染；星星为悬挂在右下角的独立小胶囊（omp 状态条式） */
+.chip--operator { position: relative; display: inline-block; padding: 2px 20px 7px; font-family: "Zhi Mang Xing", var(--hand); font-size: 23px; line-height: 1.3; color: var(--ink); background: color-mix(in srgb, var(--rarity-color, var(--ink)) 8%, rgba(255,255,255,.55)); border: 1.5px solid color-mix(in srgb, var(--rarity-color, var(--ink)) 78%, transparent); border-radius: 999px; }
+.chip-stars { position: absolute; right: -10px; bottom: -12px; display: inline-flex; align-items: center; font-style: normal; font-family: var(--print); font-size: 9px; line-height: 1; letter-spacing: 2px; color: #e8b93c; background: #fffdf8; border: 1.5px solid color-mix(in srgb, var(--rarity-color, var(--ink)) 55%, transparent); border-radius: 999px; padding: 3px 8px 3px 10px; box-shadow: 0 1px 3px rgba(64,56,46,.18); }
 .recent-stage { font-size: 14px; line-height: 1.6; }
 .letter-foot { display: flex; align-items: baseline; gap: 26px; padding-top: 14px; border-top: 1px solid rgba(64,56,46,.2); font-size: 12px; color: var(--ink-soft); }
 .letter-sign { margin-left: auto; font-size: 16px; }
@@ -212,19 +224,9 @@ const LAYOUT_SCRIPT = `
   } else {
     layoutCollage();
   }
-  window.__layoutCollage = layoutCollage;
 })();
 `
 
-// 农历日期印章：如「七月初九」→ 右上七、右下月、左上初、左下九
-export function buildSealSlots(date: Date): SealSlot[] {
-  // 库按本地时区解析，先平移到东八区墙钟
-  const shifted = new Date(date.getTime() + (480 + date.getTimezoneOffset()) * 60000)
-  const lunar = (require('lunar-javascript') as any).Lunar.fromDate(shifted)
-  const leap = lunar.getMonth() < 0
-  const text = (leap ? '闰' : lunar.getMonthInChinese() + '月') + lunar.getDayInChinese()
-  return Array.from(text).slice(0, 4).map((ch, index) => ({ ch, ...SEAL_SLOT_XY[String(index)] }))
-}
 function escapeHtml(text: string) {
   return String(text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
@@ -253,6 +255,15 @@ export function renderCardHtml(data: DailyCardData, options: { fontsCssLinks: st
           <b>${item.values.map(escapeHtml).join(' · ')}</b>
         </li>`).join('')
 
+  const birthdaySection = data.birthdays.length
+    ? `
+  <section class="section section--birthday">
+    <h2 class="hand-heading"><span class="hand-doodle">🎂</span> 今天生日<span class="print-heading-en">${escapeHtml(data.dateText)}</span></h2>
+    <div class="collage" id="collage"></div>
+    <p class="collage-note handwriting">—— 祝${data.birthdays.length}位干员生日快乐，罗德岛请客吃蛋糕 ──</p>
+  </section>`
+    : ''
+
   const stageHtml = data.stageLine
     ? `
     <div class="recent-group">
@@ -261,18 +272,6 @@ export function renderCardHtml(data: DailyCardData, options: { fontsCssLinks: st
     </div>`
     : ''
 
-  const birthdayNote = data.birthdays.length
-    ? `
-    <p class="collage-note handwriting">—— 祝${data.birthdays.length}位干员生日快乐，罗德岛请客吃蛋糕 ──</p>`
-    : ''
-
-  const birthdaySection = data.birthdays.length
-    ? `
-  <section class="section section--birthday">
-    <h2 class="hand-heading"><span class="hand-doodle">🎂</span> 今天生日<span class="print-heading-en">${escapeHtml(data.dateText)}</span></h2>
-    <div class="collage" id="collage"></div>${birthdayNote}
-  </section>`
-    : ''
   return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -293,7 +292,7 @@ ${options.fontsCssLinks}
       <span class="letter-date-day">${escapeHtml(data.dateText)}</span>
       <span class="letter-date-week">${escapeHtml(data.weekText)}</span>
     </div>
-    <div class="stamp-item" style="left: 1072px; top: -30px; width: 96px; transform: rotate(-13deg);">${stampSvg(data.sealSlots)}</div>
+    <div class="stamp-item" style="left: 1023px; top: 51px; width: 78px; transform: rotate(-9deg);">${stampSvg(data.sealSlots)}</div>
   </header>
 
   <section class="section section--collect">
@@ -310,9 +309,7 @@ ${options.fontsCssLinks}
     <ul class="core-list">${coreHtml}
     </ul>
   </section>
-
 ${birthdaySection}
-
   <section class="section section--recent">
     <h2 class="print-heading">近期新增<span class="print-heading-en">RECENT</span></h2>
     <div class="recent-group">
