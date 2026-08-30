@@ -1330,3 +1330,60 @@ function fakeElement(text, calls) {
     },
   }
 }
+
+test('registers the prts debug command family', async () => {
+  const { apply } = loadPlugin()
+  const { ctx, registeredCommands, commandHandlers } = createMockContext({})
+  apply(ctx, defaultConfig)
+
+  assert.equal(registeredCommands[0], 'prts')
+  assert.equal(registeredCommands.includes('w <input:text>'), true)
+  for (const name of ['prts.d', 'prts.r', 'prts.cache', 'prts.h']) {
+    assert.equal(commandHandlers.has(name), true, `missing ${name}`)
+  }
+})
+
+test('prts d sends the rendered letter card image', async () => {
+  const { apply } = loadPlugin()
+  const calls = []
+  const puppeteer = createFakePuppeteer({ calls })
+  const { ctx, commandHandlers, createSession } = createMockContext({ puppeteer })
+  apply(ctx, { ...defaultConfig, dailyCardEnabled: true })
+
+  const session = createSession()
+  const daily = commandHandlers.get('prts.d')
+  const reply = await daily({ session, options: {} })
+
+  assert.equal(calls.filter((item) => item === 'captureDaily').length, 1)
+  assert.match(reply, /今日信笺已发送/)
+  assert.equal(session.sent.length, 1)
+  assert.equal(String(session.sent[0]).includes('base64'), true)
+})
+
+test('prts r ignores cache and forces recapture', async () => {
+  const { apply } = loadPlugin()
+  const calls = []
+  const puppeteer = createFakePuppeteer({ calls })
+  const { ctx, commandHandlers, createSession } = createMockContext({ puppeteer })
+  apply(ctx, { ...defaultConfig, dailyCardEnabled: true })
+
+  const refresh = commandHandlers.get('prts.r')
+  const reply = await refresh({ session: createSession(), options: {} }, 'd')
+
+  assert.match(reply, /今日信笺已发送/)
+  assert.equal(calls.filter((item) => item === 'captureDaily').length, 1)
+  assert.equal(calls.filter((item) => item?.kind === 'screenshot').length, 1)
+})
+
+test('prts cache reports cache root and day status', async () => {
+  const { apply } = loadPlugin()
+  const { ctx, commandHandlers } = createMockContext({})
+  apply(ctx, defaultConfig)
+
+  const cacheCommand = commandHandlers.get('prts.cache')
+  const report = await cacheCommand({ options: {} })
+
+  assert.match(report, /今日信笺缓存诊断/)
+  assert.match(report, /当前缓存日：\d{4}-\d{2}-\d{2}/)
+  assert.match(report, /今日缓存：不存在/)
+})

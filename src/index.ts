@@ -1,6 +1,6 @@
-import { Context, Schema } from 'koishi'
+import { Context, Schema, h } from 'koishi'
 import { resolve } from 'node:path'
-import { Config as RuntimeConfig } from './types'
+import { CachedImageResult, Config as RuntimeConfig } from './types'
 import { DailyImageCache, getPrtsDayKey, getZonedParts } from './services/cache'
 import { DEFAULT_CACHE_MAINTENANCE, PrtsCaptureService } from './services/capture'
 import { matchesCronExpression } from './services/cron'
@@ -118,6 +118,24 @@ export function apply(ctx: Context, config: RuntimeConfig) {
     if (resolved.wiki.storyUpdateOnStart) runStoryUpdate('启动更新')
   }
 
+  const root = ctx.command('prts', 'Miyako 每日信笺调试命令')
+    .action(() => buildHelp())
+
+  root.subcommand('.d', '手动发送今日信笺卡片图')
+    .alias('.daily')
+    .action(async ({ session }) => sendDaily(session, false))
+
+  root.subcommand('.r', '忽略缓存强制重新抓取渲染')
+    .alias('.refresh', '.reset')
+    .action(async ({ session }) => sendDaily(session, true))
+
+  root.subcommand('.cache', '查看卡片缓存诊断')
+    .action(() => buildCacheDiagnostics())
+
+  root.subcommand('.h', '查看调试命令帮助')
+    .alias('.help')
+    .action(() => buildHelp())
+
   ctx.command('w <input:text>', '检索 Warfarin Wiki 终末地资料')
     .action(async ({ session }, input?: string) => sendWikiReply(session, () => handleWikiInput(session, input || '')))
 
@@ -147,6 +165,46 @@ export function apply(ctx: Context, config: RuntimeConfig) {
   }, 60 * 1000)
 
   logger.info(`Miyako 游戏情报插件已加载。日报刷新 ${resolved.dailyCardEnabled ? resolved.refreshCron : '关闭'}；推送 ${resolved.scheduledPush.enabled ? resolved.scheduledPush.cron : '关闭'}。`)
+
+  async function sendDaily(session: any, force = false) {
+    if (!session) return '只能在会话中使用该命令。'
+    try {
+      const result = await service.getDailyInfo(force)
+      for (const message of wrapCardMessage(result)) await session.send(message)
+      return result.stale
+        ? `今日信笺已发送（使用旧缓存 ${result.dayKey}）。`
+        : `今日信笺已发送（${result.dayKey}）。`
+    } catch (error) {
+      logger.warn(`发送今日信笺失败：${formatError(error)}`)
+      return '今日信笺生成失败，且没有可用缓存。请确认 puppeteer 插件已启用并稍后重试。'
+    }
+  }
+
+  function wrapCardMessage(result: CachedImageResult) {
+    const dataUrl = `data:${result.mimeType || 'image/png'};base64,${result.buffer.toString('base64')}`
+    return [h.image(dataUrl)]
+  }
+
+  function buildHelp() {
+    return [
+      'Miyako 每日信笺调试命令',
+      'prts d：手动发送今日信笺卡片图',
+      'prts r：忽略缓存强制重新抓取渲染',
+      'prts cache：查看卡片缓存诊断',
+    ].join('\n')
+  }
+
+  async function buildCacheDiagnostics() {
+    const diagnostics = await cache.inspect('daily')
+    return [
+      '今日信笺缓存诊断',
+      `缓存根目录：${diagnostics.cacheRoot}`,
+      `当前缓存日：${diagnostics.currentDayKey}`,
+      `今日缓存：${diagnostics.todayExists ? '存在' : '不存在'}`,
+      `最近缓存：${diagnostics.latestDayKey || '无'}`,
+      `缓存目录数：${diagnostics.dayKeys.length}`,
+    ].join('\n')
+  }
 
   async function runBackgroundJobs() {
     if (backgroundRunning) return
