@@ -1,6 +1,22 @@
 // 「今日信笺」卡片渲染：数据 → 完整 HTML（file:// 加载后截图 #letter）
 // 版式与 design/letter-prototype 保持一致；字体从渲染目录的字体文件相对引用。
 
+// ==================== 日报风格注册表 ====================
+// 新增风格：实现 render(data, options) 并注册进 CARD_STYLES，配置下拉自动出现新选项。
+export interface CardStyle {
+  id: string
+  label: string
+  render: (data: DailyCardData, options: { fontsCssLinks: string }) => string
+}
+
+export const CARD_STYLES: Record<string, CardStyle> = {
+  letter: { id: 'letter', label: '今日信笺（手账风）', render: renderCardHtml },
+}
+
+export function renderCardByStyle(styleId: string | undefined, data: DailyCardData, options: { fontsCssLinks: string }): string {
+  const style = CARD_STYLES[styleId || ''] ?? CARD_STYLES.letter
+  return style.render(data, options)
+}
 export interface SealSlot {
   ch: string
   x: number

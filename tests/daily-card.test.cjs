@@ -145,3 +145,14 @@ test('buildSealSlots lays lunar date chars into the seal grid', () => {
   assert.deepEqual(slots.map((slot) => slot.ch), ['七', '月', '十', '八'])
   assert.deepEqual(slots.map((slot) => [slot.x, slot.y]), [[71, 29], [71, 71], [29, 29], [29, 71]])
 })
+
+test('card style registry falls back to letter for unknown ids', async () => {
+  const card = mapRawToDailyCard(RAW_FIXTURE, { now: NOW })
+  const { renderCardByStyle, CARD_STYLES } = require('../lib/services/card-template.js')
+
+  assert.equal(CARD_STYLES.letter.label, '今日信笺（手账风）')
+  const byId = renderCardByStyle('letter', card, { fontsCssLinks: '' })
+  const byName = renderCardHtml(card, { fontsCssLinks: '' })
+  assert.equal(byId, byName)
+  assert.equal(renderCardByStyle('nonexistent', card, { fontsCssLinks: '' }), byName)
+})

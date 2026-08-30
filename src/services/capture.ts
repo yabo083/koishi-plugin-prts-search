@@ -5,7 +5,7 @@ import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { h } from 'koishi'
 import { CachedImageResult, CaptureKind } from '../types'
-import { DailyCardData, DailyCoreItem, DailyOperator, SealSlot, buildSealSlots, renderCardHtml } from './card-template'
+import { DailyCardData, DailyCoreItem, DailyOperator, SealSlot, buildSealSlots, renderCardByStyle } from './card-template'
 import { DailyImageCache, getZonedParts } from './cache'
 import { matchesCronExpression } from './cron'
 
@@ -248,7 +248,7 @@ export class PrtsCaptureService {
     private readonly ctx: any,
     private readonly cache: DailyImageCache,
     private readonly logger: { warn: (message: string) => void; info: (message: string) => void; debug?: (message: string) => void },
-    private readonly options: { refreshCron?: string; fetcher?: DailyFetcher; nowProvider?: () => Date } = {},
+    private readonly options: { refreshCron?: string; fetcher?: DailyFetcher; nowProvider?: () => Date; styleId?: string } = {},
   ) {}
 
   async getDailyInfo(force = false): Promise<CachedImageResult> {
@@ -318,7 +318,7 @@ export class PrtsCaptureService {
     }
 
     const fontsCssLinks = await this.ensureRenderAssets()
-    const html = renderCardHtml(data, { fontsCssLinks })
+    const html = renderCardByStyle(this.options.styleId, data, { fontsCssLinks })
     const renderDir = path.join(this.cache.rootDirectory, 'render')
     await fs.mkdir(renderDir, { recursive: true })
     const htmlPath = path.join(renderDir, 'card.html')

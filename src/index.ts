@@ -5,6 +5,7 @@ import { DailyImageCache, getPrtsDayKey, getZonedParts } from './services/cache'
 import { DEFAULT_CACHE_MAINTENANCE, PrtsCaptureService } from './services/capture'
 import { matchesCronExpression } from './services/cron'
 import { WarfarinWikiAnchor, WarfarinWikiApiError, WarfarinWikiClient, defaultUserAgent, formatWikiContext, formatWikiSearchResults } from './services/warfarin-wiki'
+import { CARD_STYLES } from './services/card-template'
 import { WarfarinStorySearchService } from './services/warfarin-story-search'
 
 export { getPrtsDayKey }
@@ -22,7 +23,7 @@ export const usage = `
   <li>每天自动抓取 PRTS 首页并渲染「今日信笺」卡片图（资源收集、核心动态、生日干员贴画、近期新增）。</li>
   <li><code>refreshCron</code> 为后台刷新时间，<code>scheduledPush.cron</code> 为推送时间，格式均为 <code>分钟 小时 日期 月份 星期</code>。</li>
   <li>推送目标 <code>scheduledPush.channels</code> 填 Koishi 频道 ID，OneBot/NapCat 群示例：<code>onebot:11111111</code>。</li>
-  <li>关闭「每日情报卡片」开关后不抓取、不推送。</li>
+  <li>关闭「每日情报卡片」开关后不抓取、不推送；<code>cardStyle</code> 可切换日报卡片风格。</li>
 </ul>
 <p><strong>Warfarin 检索</strong>：<code>w 息壤</code> 检索；<code>w 1</code> 查看结果，<code>w+</code> 翻页，<code>w+2</code> 跳页；<code>wn 321</code> 强制搜索纯数字关键词。</p>
 `
@@ -41,6 +42,7 @@ type WikiReplyPayload = string | string[]
 export const Config = Schema.intersect([
   Schema.object({
     dailyCardEnabled: Schema.boolean().default(true).description('每日情报信笺：关闭后不抓取、不推送。'),
+    cardStyle: Schema.union(Object.entries(CARD_STYLES).map(([id, style]) => Schema.const(id).description(style.label))).default('letter').description('日报卡片风格。'),
     logLevel: Schema.union([
       Schema.const('silent').description('静默：不输出插件运行日志。'),
       Schema.const('warn').description('警告：只输出失败和异常。'),
@@ -94,7 +96,7 @@ export function apply(ctx: Context, config: RuntimeConfig) {
   const logger = createScopedLogger(ctx.logger(name), resolved.logLevel)
   const nowProvider = () => resolved.now ? new Date(resolved.now) : new Date()
   const cache = new DailyImageCache(ctx.baseDir, 'data/miyako-intel/cache', 'Asia/Shanghai', 4, nowProvider)
-  const service = new PrtsCaptureService(ctx, cache, logger, { refreshCron: resolved.refreshCron, nowProvider })
+  const service = new PrtsCaptureService(ctx, cache, logger, { refreshCron: resolved.refreshCron, nowProvider, styleId: resolved.cardStyle })
   const wikiClient = new WarfarinWikiClient({ baseUrl: resolved.wiki.baseUrl, mode: resolved.wiki.mode, language: resolved.wiki.language, userAgent: resolved.wiki.userAgent, timeoutMs: resolved.wiki.timeoutMs, fetch: createKoishiHttpFetch(ctx.http, resolved.wiki.timeoutMs) })
   const storyClient = new WarfarinWikiClient({ baseUrl: resolved.wiki.storyBaseUrl, mode: 'story', language: resolved.wiki.storyLanguage, scopes: storyScopes, pageBaseUrl: '', userAgent: resolved.wiki.userAgent, timeoutMs: resolved.wiki.timeoutMs, fetch: createKoishiHttpFetch(ctx.http, resolved.wiki.timeoutMs) })
   const storySearch = new WarfarinStorySearchService({ baseDir: ctx.baseDir, dataDirectory: resolved.wiki.storyDataDirectory, language: resolved.wiki.storyLanguage, timeoutMs: resolved.wiki.timeoutMs, bundleManifestUrl: resolved.wiki.storyBundleManifestUrl, fetch: createKoishiHttpFetch(ctx.http, resolved.wiki.timeoutMs) })
@@ -586,6 +588,7 @@ export function apply(ctx: Context, config: RuntimeConfig) {
 function resolveConfig(config: Partial<RuntimeConfig> = {}): RuntimeConfig {
   return {
     dailyCardEnabled: config.dailyCardEnabled ?? true,
+    cardStyle: config.cardStyle || 'letter',
     refreshCron: config.refreshCron || '5 4 * * *',
     logLevel: config.logLevel || 'info',
     scheduledPush: {

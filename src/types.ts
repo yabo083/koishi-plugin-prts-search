@@ -1,6 +1,8 @@
 export interface Config {
   /** 每日情报卡片总开关：关闭后不抓取、不推送 */
   dailyCardEnabled: boolean
+  /** 日报卡片风格 id（见 card-template 的 CARD_STYLES） */
+  cardStyle: string
   refreshCron: string
   logLevel: LogLevel
   scheduledPush: ScheduledPushConfig
