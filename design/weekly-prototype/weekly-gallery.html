@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>泰拉周刊 · 一周七色变体</title>
+<style>
+:root { --ink: #14131a; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #24232a;
+  color: #e9e6e0;
+  font-family: "PingFang SC", "MiSans", "Microsoft YaHei", sans-serif;
+  padding: 24px 28px 60px;
+}
+h1 { font-size: 20px; letter-spacing: .1em; font-weight: 700; }
+p.tip { margin-top: 8px; font-size: 13px; line-height: 1.7; color: #a9a5a0; }
+p.tip b { color: #f0c674; }
+.sheet {
+  margin-top: 22px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px 16px;
+}
+.cell { min-width: 0; }
+.cell__head {
+  display: flex; align-items: baseline; gap: 8px;
+  padding-bottom: 8px;
+  font-size: 13px; letter-spacing: .08em;
+}
+.cell__head b { font-size: 15px; }
+.cell__head i { font-style: normal; color: #8f8b85; font-size: 12px; }
+.cell__head a { color: #7fb3d5; font-size: 12px; margin-left: auto; }
+/* 用 iframe 实时渲染 1080 宽的真实版面，再整体缩放到格子宽度 */
+.frame {
+  position: relative;
+  width: 100%;
+  padding-top: 163%; /* 1844 / 1128 ≈ 1.63，加载完按实际高度收紧 */
+  overflow: hidden;
+  background: #f7f4ef;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .4);
+}
+.frame iframe {
+  position: absolute; top: 0; left: 0;
+  width: 1128px; height: 2000px;
+  border: 0;
+  transform-origin: top left;
+}
+</style>
+</head>
+<body>
+<h1>泰拉周刊 · 一周七色变体</h1>
+<p class="tip">
+  同一套版面、同一份数据，只有<b>强调色随星期轮换</b>（纸墨恒定）。缩略图是 1080 宽的真实版面等比缩放，
+  点右上「原尺寸」看单页。后三格分别是<b>无生日</b>退化版式、<b>单人封面</b>、<b>衬影备选</b>方案。
+</p>
+<div class="sheet" id="sheet"></div>
+
+<script>
+const WEEKS = [
+  { week: 1, cn: '星期一', name: '靛蓝', hex: '#2f4f7a' },
+  { week: 2, cn: '星期二', name: '陶土', hex: '#a44a2a' },
+  { week: 3, cn: '星期三', name: '橄榄', hex: '#4f6b3c' },
+  { week: 4, cn: '星期四', name: '藕紫', hex: '#6a4a7c' },
+  { week: 5, cn: '星期五', name: '赭金', hex: '#8f6516' },
+  { week: 6, cn: '星期六', name: '松绿', hex: '#22706b' },
+  { week: 0, cn: '星期日', name: '胭脂', hex: '#b0303f' },
+]
+
+const sheet = document.getElementById('sheet')
+const cells = WEEKS.map((item) => ({
+  query: `case=multi&week=${item.week}`,
+  label: item.cn,
+  note: `${item.name} ${item.hex}`,
+}))
+cells.push({ query: 'case=none&week=2', label: '无生日', note: '退化版式' })
+cells.push({ query: 'case=solo&week=6', label: '单人封面', note: '大图 + 大字名号' })
+cells.push({ query: 'case=multi&week=2&shade=ghost', label: '衬影（备选）', note: '素材退到字后当水印' })
+
+for (const cell of cells) {
+  const el = document.createElement('section')
+  el.className = 'cell'
+  el.innerHTML = `
+    <div class="cell__head"><b>${cell.label}</b><i>${cell.note}</i>
+      <a href="./weekly.html?${cell.query}" target="_blank">原尺寸 ↗</a></div>
+    <div class="frame"><iframe src="./weekly.html?${cell.query}" loading="eager" scrolling="no"></iframe></div>`
+  sheet.append(el)
+  // 每个 iframe 的字体加载完再量，否则会按未排版完的高度裁掉页脚
+  el.querySelector('iframe').addEventListener('load', (event) => {
+    const doc = event.target.contentDocument
+    const ready = doc && doc.fonts ? doc.fonts.ready : Promise.resolve()
+    ready.then(() => setTimeout(fit, 80))
+  })
+}
+
+// iframe 内是 1080 宽的定尺版面（body 上下还有 36px 留白）：缩放后上移那段留白，再按内容高度收紧外框
+function fit() {
+  for (const frame of document.querySelectorAll('.frame')) {
+    const iframe = frame.querySelector('iframe')
+    const scale = frame.clientWidth / 1128
+    const card = iframe.contentDocument && iframe.contentDocument.getElementById('letter')
+    const offset = card ? card.getBoundingClientRect().top + iframe.contentWindow.scrollY : 36
+    iframe.style.transform = `translateY(${-offset * scale}px) scale(${scale})`
+    if (card) frame.style.paddingTop = `${card.offsetHeight * scale}px`
+  }
+}
+window.addEventListener('resize', fit)
+window.addEventListener('load', () => { fit(); setTimeout(fit, 400); setTimeout(fit, 1200) })
+fit()
+</script>
+</body>
+</html>

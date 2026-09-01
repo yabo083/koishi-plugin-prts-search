@@ -5,7 +5,7 @@ import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { h } from 'koishi'
 import { CachedImageResult, CaptureKind } from '../types'
-import { DailyCardData, DailyCoreItem, DailyOperator, SealSlot, buildSealSlots, renderCardByStyle } from './card-template'
+import { DailyCardData, DailyCoreItem, DailyOperator, SealSlot, buildSealSlots, renderCardByStyle, resolveCardStyle } from './card-template'
 import { DailyImageCache, getZonedParts } from './cache'
 import { matchesCronExpression } from './cron'
 
@@ -18,7 +18,14 @@ const RENDER_DELAY_MS = 800
 const VIEWPORT = { width: 1280, height: 900, deviceScaleFactor: 1 }
 const QQ_IMAGE_MAX_BYTES = 2 * 1024 * 1024
 const ART_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000
-const RENDER_FONTS_VERSION = 1
+const RENDER_FONTS_VERSION = 2
+// 「泰拉周刊」正文用 500、标题用 900，宋体四档一起备好
+const SERIF_CSS_FILES = [
+  'chinese-simplified-400.css',
+  'chinese-simplified-500.css',
+  'chinese-simplified-700.css',
+  'chinese-simplified-900.css',
+]
 
 const BROWSER_HEADERS = {
   'User-Agent': USER_AGENT,
@@ -39,10 +46,11 @@ export interface RawDailyData {
   groups: Array<{ title: string; entries: Array<{ name: string; avatar: string; rarity: number }> }>
   todayParagraphs: string[]
   coreItems: Array<{ text: string; epoch: number }>
-  stageBlocks: Array<{ title: string; intro: string[]; codes: string[] }>
+  /** 每个小节（新增关卡 / 新增家具）：lead 是活动名，groups 是活动下的各关卡集 */
+  stageBlocks: Array<{ title: string; lead: string; groups: Array<{ title: string; codes: string[] }> }>
 }
 
-const EXTRACT_DAILY_SNIPPET = function extractDailyData() {
+export const EXTRACT_DAILY_SNIPPET = function extractDailyData() {
   const clean = (value: unknown) => String(value || '').replace(/\s+/g, ' ').trim()
   const decode = (value: string) => {
     try { return decodeURIComponent(value || '') } catch { return value || '' }
@@ -77,22 +85,33 @@ const EXTRACT_DAILY_SNIPPET = function extractDailyData() {
     : []
 
   const nav = document.querySelector('.mp-extranav')
-  const stageBlocks: Array<{ title: string; intro: string[]; codes: string[] }> = []
+  const stageBlocks: Array<{ title: string; lead: string; groups: Array<{ title: string; codes: string[] }> }> = []
   if (nav) {
     for (const heading of Array.from(nav.querySelectorAll('h3'))) {
-      const intro: string[] = []
-      const codes: string[] = []
+      // 结构：<p><b>活动名</b></p> 然后是若干组「<p><b>关卡集名</b></p> + <ul>关卡</ul>」
+      const lead = { text: '' }
+      const groups: Array<{ title: string; codes: string[] }> = []
       let node = heading.parentElement ? heading.parentElement.nextElementSibling : heading.nextElementSibling
       while (node && !/^H[1-4]$/.test(node.tagName) && !node.classList?.contains('mw-heading')) {
         if (node.tagName === 'UL') {
-          codes.push(...Array.from(node.querySelectorAll('li')).map((li) => clean(li.textContent)))
+          const codes = Array.from(node.querySelectorAll('li')).map((li) => clean(li.textContent))
+          if (groups.length) groups[groups.length - 1].codes.push(...codes)
+          else groups.push({ title: '', codes })
         } else {
           const text = clean(node.textContent)
-          if (text) intro.push(text)
+          // 只有「后面紧跟的不是关卡列表」的首个段落才算活动名，其余都是关卡集小标题
+          const isLead = !lead.text && !groups.length
+            && (!node.nextElementSibling || node.nextElementSibling.tagName !== 'UL')
+          if (text && isLead) lead.text = text
+          else if (text) groups.push({ title: text, codes: [] })
         }
         node = node.nextElementSibling
       }
-      stageBlocks.push({ title: clean(heading.textContent), intro, codes })
+      stageBlocks.push({
+        title: clean(heading.textContent),
+        lead: lead.text,
+        groups: groups.filter((group) => group.codes.length),
+      })
     }
   }
 
@@ -170,21 +189,26 @@ export function mapRawToDailyCard(raw: RawDailyData, options: { now: Date }): Da
   const toOperators = (group?: RawDailyData['groups'][number]): DailyOperator[] =>
     (group?.entries || [])
       .filter((entry) => !/(一览|进行中)/.test(entry.name))
-      .map((entry) => ({ name: entry.name, rarity: entry.rarity }))
+      .map((entry) => ({ name: entry.name, rarity: entry.rarity, avatar: entry.avatar }))
 
   const collectParagraph = raw.todayParagraphs.find((text) => text.includes('物资筹备分区')) || ''
   const materialMatch = collectParagraph.match(/物资筹备分区：([\s\S]*?)芯片搜索分区/)
   const chipMatch = collectParagraph.match(/芯片搜索分区：([\s\S]*)$/)
 
   const stageBlock = raw.stageBlocks.find((block) => block.title === '新增关卡')
-  const stageCodes = (stageBlock?.codes || [])
-    .map((code) => code.split(/\s+/)[0])
-    .filter((code) => /^[A-Za-z]/.test(code))
-  const compressedStageCodes = compressStageCodes(stageCodes)
-  const stageHead = [stageBlock?.intro[0] || '', stageBlock?.intro[1] || ''].filter(Boolean).join(' · ')
-  const stageLine = stageBlock
-    ? `${stageHead}${compressedStageCodes ? `（${compressedStageCodes}）` : ''}`
-    : ''
+  // 每个关卡集单独压缩号段：PRTS 首页把「踏上归家长途 / 眺望待行之路 / 奇象巡展 …」分组列出，卡面照搬这个分组
+  const stageGroups = (stageBlock?.groups || []).map((group) => ({
+    title: group.title,
+    codes: compressStageCodes(group.codes
+      .map((code) => code.split(/\s+/)[0])
+      .filter((code) => /^[A-Za-z]/.test(code))),
+  })).filter((group) => group.title || group.codes)
+  const stageTitle = stageBlock?.lead || ''
+  // 单行版本给「今日信笺 / 泰拉晨报」用
+  const stageLine = stageGroups.length
+    ? [stageTitle, ...stageGroups.map((group) => `${group.title}${group.codes ? `（${group.codes}）` : ''}`)]
+      .filter(Boolean).join(' · ')
+    : stageTitle
 
   const birthdays = (findGroup(/生日/)?.entries || []).map((entry, index) => ({
     name: entry.name,
@@ -209,6 +233,8 @@ export function mapRawToDailyCard(raw: RawDailyData, options: { now: Date }): Da
     recentOperators: toOperators(findGroup(/近期新增/)),
     poolOperators: [...toOperators(findGroup(/凭证兑换/)), ...toOperators(findGroup(/甄选/))],
     stageLine,
+    stageTitle,
+    stageGroups,
   }
 }
 
@@ -316,6 +342,9 @@ export class PrtsCaptureService {
     for (const birthday of data.birthdays) {
       birthday.art = await this.fetchBirthdayArt(birthday.name, birthday.avatar)
     }
+    if (resolveCardStyle(this.options.styleId).needsOperatorAvatars) {
+      await this.inlineOperatorAvatars([...data.recentOperators, ...data.poolOperators])
+    }
 
     const fontsCssLinks = await this.ensureRenderAssets()
     const html = renderCardByStyle(this.options.styleId, data, { fontsCssLinks })
@@ -344,6 +373,30 @@ export class PrtsCaptureService {
     })
 
     return { buffer, mimeType, titles: ['今日信笺'], sourceUrls: [this.homepageUrl] }
+  }
+
+  /* ---------- 干员头像（不落盘：一天只渲一次，缓存不值当；失败留空由渲染器出占位） ---------- */
+
+  private async inlineOperatorAvatars(operators: DailyOperator[]) {
+    const fetcher = this.options.fetcher || defaultFetcher
+    const cache = new Map<string, string>()
+    for (const operator of operators) {
+      const url = operator.avatar
+      if (!url || url.startsWith('data:')) continue
+      if (cache.has(url)) {
+        operator.avatar = cache.get(url)
+        continue
+      }
+      try {
+        const dataUrl = await this.downloadAsDataUrl(url, fetcher)
+        cache.set(url, dataUrl)
+        operator.avatar = dataUrl
+      } catch (error) {
+        cache.set(url, '')
+        operator.avatar = ''
+        this.logger.warn(`干员「${operator.name}」头像获取失败，改用占位图：${formatError(error)}`)
+      }
+    }
   }
 
   /* ---------- 生日干员半身立绘（磁盘缓存 + 头像兜底） ---------- */
@@ -430,7 +483,7 @@ export class PrtsCaptureService {
         await fs.rm(fontsDir, { recursive: true, force: true })
         await copyInto(lxgwDir, path.join(fontsDir, 'lxgw'), ['lxgwwenkailite-regular.css', 'lxgwwenkailite-bold.css'])
         await copyInto(zmxDir, path.join(fontsDir, 'zmx'), ['index.css'])
-        await copyInto(serifDir, path.join(fontsDir, 'serif'), ['chinese-simplified-400.css', 'chinese-simplified-700.css'], /chinese-simplified-[47]00[^/]*.woff2$/)
+        await copyInto(serifDir, path.join(fontsDir, 'serif'), SERIF_CSS_FILES, /chinese-simplified-[4579]00[^/]*\.woff2$/)
         await fs.writeFile(path.join(fontsDir, 'version.json'), version, 'utf8')
         this.logger.debug?.('日报渲染字体资源已就绪。')
       }
@@ -438,6 +491,7 @@ export class PrtsCaptureService {
         'lxgw/lxgwwenkailite-regular.css',
         'lxgw/lxgwwenkailite-bold.css',
         'zmx/index.css',
+        ...SERIF_CSS_FILES.map((file) => `serif/${file}`),
       ].map((relative) => `<link rel="stylesheet" href="${pathToFileURL(path.join(fontsDir, relative)).href}">`).join('\n')
     } catch (error) {
       this.logger.warn(`渲染字体资源缺失，退化为系统楷体：${formatError(error)}`)
@@ -494,14 +548,6 @@ async function copyInto(sourceDir: string, targetDir: string, files: string[], f
     if (fileFilter && !fileFilter.test(entry)) continue
     await fs.copyFile(path.join(filesDir, entry), path.join(targetFilesDir, entry))
   }
-}
-
-function buildFontLinks() {
-  return [
-    '<link rel="stylesheet" href="./fonts/lxgw/lxgwwenkailite-regular.css">',
-    '<link rel="stylesheet" href="./fonts/lxgw/lxgwwenkailite-bold.css">',
-    '<link rel="stylesheet" href="./fonts/zmx/index.css">',
-  ].join('\n')
 }
 
 function readPackageVersion(packageDir: string) {

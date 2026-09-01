@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>泰拉周刊 · 外框六版对比</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #24232a;
+  color: #e9e6e0;
+  font-family: "PingFang SC", "MiSans", "Microsoft YaHei", sans-serif;
+  padding: 24px 28px 60px;
+}
+h1 { font-size: 20px; letter-spacing: .1em; }
+p.tip { margin-top: 8px; font-size: 13px; line-height: 1.7; color: #a9a5a0; }
+p.tip b { color: #f0c674; }
+.sheet { margin-top: 22px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 26px 20px; }
+.cell__head {
+  display: flex; align-items: baseline; gap: 10px;
+  padding-bottom: 8px; font-size: 13px;
+}
+.cell__head b { font-size: 15px; }
+.cell__head i { font-style: normal; color: #8f8b85; font-size: 12px; }
+.cell__head a { color: #7fb3d5; font-size: 12px; margin-left: auto; }
+/* 左：等比缩到 ~400px 宽，模拟群聊里的实际观感；右：局部原尺寸 */
+.cell { min-width: 0; overflow: hidden; }
+.pair { display: flex; gap: 12px; align-items: flex-start; min-width: 0; }
+.mini { position: relative; width: 400px; flex: none; overflow: hidden; background: #f7f4ef; }
+.mini iframe { position: absolute; top: 0; left: 0; border: 0; transform-origin: top left; }
+.crop { position: relative; flex: 1 1 0; min-width: 0; height: 340px; overflow: hidden; background: #f7f4ef; border: 1px solid #3a3941; }
+.crop iframe { position: absolute; top: 0; left: 0; border: 0; }
+</style>
+</head>
+<body>
+<h1>泰拉周刊 · 外框六版对比</h1>
+<p class="tip">
+  每格左边是<b>缩到 400px 宽</b>的整页（群聊里的真实观感），右边是<b>左上角 1/2 尺寸</b>局部，看边框厚度与内容的关系。
+  内页恒定 1080 宽，只有外框零件在变，所以正文字号完全一致。
+</p>
+<div class="sheet" id="sheet"></div>
+
+<script>
+const FRAMES = [
+  { id: 1, name: '双线 + 角标', note: '6px 墨边 / 2px 内线 / 四角强调块', w: 1128 },
+  { id: 2, name: '装订书脊', note: '左侧强调色竖带 + 竖排刊名', w: 1160 },
+  { id: 3, name: '出血墨框', note: '10px 黑边内贴 3px 强调线，无纸边', w: 1100 },
+  { id: 4, name: '四角 L 角标', note: '只钉四角，中间全留白', w: 1140 },
+  { id: 5, name: '胶片穿孔', note: '左右墨色穿孔带 + 上下粗线', w: 1172 },
+  { id: 6, name: '墨框 + 顶标签', note: '7px 墨边 + 顶部凸出强调标签', w: 1126 },
+  { id: 7, name: '出血墨框 + 标签', note: 'V3 的重量 + 右上凸出标签', w: 1100 },
+]
+const MINI_W = 400
+const sheet = document.getElementById('sheet')
+
+for (const item of FRAMES) {
+  const query = `case=multi&week=2&frame=${item.id}`
+  const el = document.createElement('section')
+  el.className = 'cell'
+  el.innerHTML = `
+    <div class="cell__head"><b>V${item.id} ${item.name}</b><i>${item.note}</i>
+      <a href="./weekly.html?${query}" target="_blank">原尺寸 ↗</a></div>
+    <div class="pair">
+      <div class="mini"><iframe src="./weekly.html?${query}" scrolling="no"
+        style="width:${item.w}px;height:2100px;transform:scale(${MINI_W / item.w})"></iframe></div>
+      <div class="crop"><iframe src="./weekly.html?${query}" scrolling="no"
+        style="width:${item.w}px;height:1400px;transform-origin:top left"></iframe></div>
+    </div>`
+  sheet.append(el)
+  for (const iframe of el.querySelectorAll('iframe')) {
+    iframe.addEventListener('load', (event) => {
+      const doc = event.target.contentDocument
+      const ready = doc && doc.fonts ? doc.fonts.ready : Promise.resolve()
+      ready.then(() => setTimeout(fit, 80))
+    })
+  }
+}
+
+// 缩略格按内容实际高度收紧；两个 iframe 都要上移 body 的 36px 留白
+function fit() {
+  for (const cell of document.querySelectorAll('.cell')) {
+    const mini = cell.querySelector('.mini')
+    const iframe = mini.querySelector('iframe')
+    const card = iframe.contentDocument && iframe.contentDocument.getElementById('letter')
+    if (!card) continue
+    const scale = MINI_W / card.offsetWidth
+    const offset = card.getBoundingClientRect().top + iframe.contentWindow.scrollY
+    iframe.style.transform = `translateY(${-offset * scale}px) scale(${scale})`
+    mini.style.height = `${card.offsetHeight * scale}px`
+    // 细节格：左上角 1/2 尺寸，既看得到边框厚度也看得到它和内容的关系
+    const crop = cell.querySelector('.crop iframe')
+    const cropCard = crop.contentDocument && crop.contentDocument.getElementById('letter')
+    if (cropCard) {
+      const cropOffset = cropCard.getBoundingClientRect().top + crop.contentWindow.scrollY
+      crop.style.transform = `translateY(${-cropOffset * 0.5}px) scale(0.5)`
+    }
+  }
+}
+window.addEventListener('resize', fit)
+window.addEventListener('load', () => { fit(); setTimeout(fit, 500); setTimeout(fit, 1400) })
+fit()
+</script>
+</body>
+</html>

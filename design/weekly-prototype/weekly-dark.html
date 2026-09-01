@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>泰拉周刊 · 夜间模式 × 外框 V2/V3/V7</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #1b1b21;
+  color: #e9e6e0;
+  font-family: "PingFang SC", "MiSans", "Microsoft YaHei", sans-serif;
+  padding: 24px 28px 60px;
+}
+h1 { font-size: 20px; letter-spacing: .1em; }
+p.tip { margin-top: 8px; font-size: 13px; line-height: 1.7; color: #a9a5a0; }
+p.tip b { color: #f0c674; }
+.sheet { margin-top: 22px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 26px 20px; }
+.cell { min-width: 0; overflow: hidden; }
+.cell__head { display: flex; align-items: baseline; gap: 10px; padding-bottom: 8px; font-size: 13px; }
+.cell__head b { font-size: 15px; }
+.cell__head i { font-style: normal; color: #8f8b85; font-size: 12px; }
+.cell__head a { color: #7fb3d5; font-size: 12px; margin-left: auto; }
+.pair { display: flex; gap: 12px; align-items: flex-start; min-width: 0; }
+.mini { position: relative; width: 400px; flex: none; overflow: hidden; background: #101015; }
+.mini iframe { position: absolute; top: 0; left: 0; border: 0; transform-origin: top left; }
+.crop {
+  position: relative; flex: 1 1 0; min-width: 0; height: 340px;
+  overflow: hidden; background: #101015; border: 1px solid #3a3941;
+}
+.crop iframe { position: absolute; top: 0; left: 0; border: 0; transform-origin: top left; }
+</style>
+</head>
+<body>
+<h1>泰拉周刊 · 夜间模式 × 外框 V2 / V3 / V7</h1>
+<p class="tip">
+  左边 <b>400px 宽</b>（群聊真实观感），右边 <b>左上角 1/2 尺寸</b>。夜间模式：立绘糊成顶部色雾（acrylic）、
+  分区改<b>磨砂玻璃卡</b>、栏目标签反白亮块、倒计时强调色发光、星级块提亮压深底。末格是白天版 V7 对照。
+</p>
+<div class="sheet" id="sheet"></div>
+
+<script>
+const CELLS = [
+  { frame: 2, theme: 'dark', name: 'V2 装订书脊 · 夜间', note: '强调色书脊 + 玻璃卡', w: 1160 },
+  { frame: 3, theme: 'dark', name: 'V3 出血墨框 · 夜间', note: '强调色染边 + 内侧亮线', w: 1100 },
+  { frame: 7, theme: 'dark', name: 'V7 出血墨框 + 标签 · 夜间', note: '同 V3 + 右上凸标签', w: 1100 },
+  { frame: 7, theme: 'light', name: 'V7 · 白天（对照）', note: '同版式的印刷版', w: 1100 },
+]
+const MINI_W = 400
+const sheet = document.getElementById('sheet')
+
+for (const item of CELLS) {
+  const query = `case=multi&week=2&frame=${item.frame}${item.theme === 'dark' ? '&theme=dark' : ''}`
+  const el = document.createElement('section')
+  el.className = 'cell'
+  el.innerHTML = `
+    <div class="cell__head"><b>${item.name}</b><i>${item.note}</i>
+      <a href="./weekly.html?${query}" target="_blank">原尺寸 ↗</a></div>
+    <div class="pair">
+      <div class="mini"><iframe src="./weekly.html?${query}" scrolling="no"
+        style="width:${item.w}px;height:2200px;transform:scale(${MINI_W / item.w})"></iframe></div>
+      <div class="crop"><iframe src="./weekly.html?${query}" scrolling="no"
+        style="width:${item.w}px;height:1400px"></iframe></div>
+    </div>`
+  sheet.append(el)
+  for (const iframe of el.querySelectorAll('iframe')) {
+    iframe.addEventListener('load', (event) => {
+      const doc = event.target.contentDocument
+      const ready = doc && doc.fonts ? doc.fonts.ready : Promise.resolve()
+      ready.then(() => setTimeout(fit, 80))
+    })
+  }
+}
+
+function fit() {
+  for (const cell of document.querySelectorAll('.cell')) {
+    const mini = cell.querySelector('.mini')
+    const iframe = mini.querySelector('iframe')
+    const card = iframe.contentDocument && iframe.contentDocument.getElementById('letter')
+    if (!card) continue
+    const scale = MINI_W / card.offsetWidth
+    const offset = card.getBoundingClientRect().top + iframe.contentWindow.scrollY
+    iframe.style.transform = `translateY(${-offset * scale}px) scale(${scale})`
+    mini.style.height = `${card.offsetHeight * scale}px`
+    const crop = cell.querySelector('.crop iframe')
+    const cropCard = crop.contentDocument && crop.contentDocument.getElementById('letter')
+    if (cropCard) {
+      const cropOffset = cropCard.getBoundingClientRect().top + crop.contentWindow.scrollY
+      crop.style.transform = `translateY(${-cropOffset * 0.5}px) scale(0.5)`
+    }
+  }
+}
+window.addEventListener('resize', fit)
+window.addEventListener('load', () => { fit(); setTimeout(fit, 500); setTimeout(fit, 1400) })
+fit()
+</script>
+</body>
+</html>

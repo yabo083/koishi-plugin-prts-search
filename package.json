@@ -8,6 +8,7 @@
     "lib",
     "dist",
     "client",
+    "assets",
     "README.md",
     "LICENSE"
   ],

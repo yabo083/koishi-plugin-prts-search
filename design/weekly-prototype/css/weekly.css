@@ -1,0 +1,585 @@
+/* ================================================================
+   泰拉周刊 · TERRA WEEKLY v2 —— 海报级版式
+   前提：群聊会把整图压到约 400px 宽（≈32%），所以一切按「缩到三分之一还要读得清」来定尺寸
+   手段：画布收窄到 1080 / 正文最小 26px / 栏目标题黑底反白 / 粗分隔线 / 倒计时特大数字
+   ================================================================ */
+
+:root {
+  --paper: #f7f4ef;
+  --ink: #14131a;
+  --ink-2: rgba(20, 19, 26, 0.74);
+  --ink-3: rgba(20, 19, 26, 0.5);
+  --hair: rgba(20, 19, 26, 0.22);
+  --accent: #b23a48;
+  --accent-soft: rgba(178, 58, 72, 0.12);
+  --serif: "Noto Serif SC", "Source Han Serif SC", "Songti SC", serif;
+  --sans: "PingFang SC", "MiSans", "Microsoft YaHei", sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #d9d5cf;
+  font-family: var(--serif);
+  font-weight: 700;
+  color: var(--ink);
+  padding: 36px 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ================================================================
+   外框：六个变体，用 .wk-frame--v1 ~ v6 切换（内页恒定 1080 宽）
+   零件默认全隐藏，各变体只点亮自己需要的那几件
+   ================================================================ */
+.wk-frame {
+  position: relative;
+  margin: 0 auto;
+  background: var(--paper);
+  box-shadow: 0 20px 50px rgba(20, 19, 26, 0.24);
+}
+.wk-frame__rule, .wk-corner, .wk-frame__spine, .wk-frame__film, .wk-frame__tab { display: none; }
+
+/* ---- V1 双线 + 四角强调块：印刷品裁切标记 ---- */
+.wk-frame--v1 { width: 1128px; padding: 18px; border: 6px solid var(--ink); }
+.wk-frame--v1 .wk-frame__rule {
+  display: block;
+  position: absolute;
+  inset: 8px;
+  border: 2px solid var(--ink);
+}
+.wk-frame--v1 .wk-corner {
+  display: block;
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: var(--accent);
+}
+.wk-frame--v1 .wk-corner--tl { left: 8px; top: 8px; }
+.wk-frame--v1 .wk-corner--tr { right: 8px; top: 8px; }
+.wk-frame--v1 .wk-corner--bl { left: 8px; bottom: 8px; }
+.wk-frame--v1 .wk-corner--br { right: 8px; bottom: 8px; }
+
+/* ---- V2 装订书脊：左侧强调色竖带 + 竖排刊名 ---- */
+.wk-frame--v2 {
+  width: 1160px;
+  padding: 16px 16px 16px 64px;
+  border: 3px solid var(--ink);
+}
+.wk-frame--v2 .wk-frame__spine {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 48px;
+  background: var(--accent);
+  color: #fff;
+  writing-mode: vertical-rl;
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 0.34em;
+}
+.wk-frame--v2 .wk-frame__spine i { font-style: normal; opacity: 0.72; letter-spacing: 0.2em; }
+
+/* ---- V3 出血墨框：10px 黑边内贴 3px 强调线，无纸边 ---- */
+.wk-frame--v3 { width: 1100px; padding: 0; border: 10px solid var(--ink); }
+.wk-frame--v3 .wk-frame__rule {
+  display: block;
+  position: absolute;
+  inset: 0;
+  border: 3px solid var(--accent);
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* ---- V4 四角 L 角标：只钉四角，中间全留白 ---- */
+.wk-frame--v4 { width: 1140px; padding: 30px; }
+.wk-frame--v4 .wk-corner {
+  display: block;
+  position: absolute;
+  width: 58px;
+  height: 58px;
+}
+.wk-frame--v4 .wk-corner::after {
+  content: "";
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  background: var(--accent);
+}
+.wk-frame--v4 .wk-corner--tl { left: 10px; top: 10px; border-left: 6px solid var(--ink); border-top: 6px solid var(--ink); }
+.wk-frame--v4 .wk-corner--tr { right: 10px; top: 10px; border-right: 6px solid var(--ink); border-top: 6px solid var(--ink); }
+.wk-frame--v4 .wk-corner--bl { left: 10px; bottom: 10px; border-left: 6px solid var(--ink); border-bottom: 6px solid var(--ink); }
+.wk-frame--v4 .wk-corner--br { right: 10px; bottom: 10px; border-right: 6px solid var(--ink); border-bottom: 6px solid var(--ink); }
+.wk-frame--v4 .wk-corner--tl::after { left: -6px; top: -6px; }
+.wk-frame--v4 .wk-corner--tr::after { right: -6px; top: -6px; }
+.wk-frame--v4 .wk-corner--bl::after { left: -6px; bottom: -6px; }
+.wk-frame--v4 .wk-corner--br::after { right: -6px; bottom: -6px; }
+
+/* ---- V5 胶片穿孔侧带 ---- */
+.wk-frame--v5 {
+  width: 1172px;
+  padding: 14px 46px;
+  border-top: 5px solid var(--ink);
+  border-bottom: 5px solid var(--ink);
+}
+.wk-frame--v5 .wk-frame__film {
+  display: block;
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 36px;
+  background: var(--ink);
+}
+.wk-frame--v5 .wk-frame__film--l { left: 0; }
+.wk-frame--v5 .wk-frame__film--r { right: 0; }
+.wk-frame--v5 .wk-frame__film::before {
+  content: "";
+  position: absolute;
+  left: 50%; top: 16px; bottom: 16px;
+  width: 15px;
+  transform: translateX(-50%);
+  background: repeating-linear-gradient(180deg, var(--paper) 0 22px, transparent 22px 48px);
+}
+
+/* ---- V7 出血墨框 + 顶部凸出标签：V3 的重量感 + V6 的焦点 ---- */
+.wk-frame--v7 { width: 1100px; padding: 0; border: 10px solid var(--ink); }
+.wk-frame--v7 .wk-frame__rule {
+  display: block;
+  position: absolute;
+  inset: 0;
+  border: 3px solid var(--accent);
+  z-index: 3;
+  pointer-events: none;
+}
+.wk-frame--v7 .wk-frame__tab {
+  display: block;
+  position: absolute;
+  top: -10px;
+  right: 46px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 21px;
+  font-weight: 900;
+  letter-spacing: 0.24em;
+  padding: 6px 24px 8px;
+  z-index: 4;
+}
+
+/* ---- V6 墨框 + 顶部凸出标签 ---- */
+.wk-frame--v6 { width: 1126px; padding: 16px; border: 7px solid var(--ink); }
+.wk-frame--v6 .wk-frame__tab {
+  display: block;
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--accent);
+  color: #fff;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 0.24em;
+  padding: 7px 30px 9px;
+  z-index: 3;
+}
+
+.wk {
+  position: relative;
+  width: 1080px;
+  background: var(--paper);
+  overflow: hidden;
+}
+.wk-body { padding: 0 44px; }
+/* 顶部色雾只在夜间模式出现 */
+.wk-hero { display: none; }
+
+/* ---------------- 报头：黑底反白，缩到缩略图也是一块实心锚点 ---------------- */
+.wk-cap {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 30px;
+  padding: 20px 44px 18px;
+  background: var(--ink);
+  color: var(--paper);
+}
+.wk-cap__title {
+  font-size: 96px;
+  font-weight: 900;
+  line-height: 0.9;
+  letter-spacing: 0.05em;
+}
+.wk-cap__en {
+  margin-top: 12px;
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: rgba(247, 244, 239, 0.66);
+}
+.wk-cap__right { flex: none; text-align: right; }
+.wk-cap__date {
+  font-size: 78px;
+  font-weight: 900;
+  line-height: 0.86;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.wk-cap__meta {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  font-size: 25px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+.wk-cap__week {
+  background: var(--accent);
+  color: #fff;
+  padding: 4px 14px 6px;
+}
+.wk-cap__clip { color: rgba(247, 244, 239, 0.72); font-weight: 700; }
+
+/* ---------------- 栏目标题：黑底反白标签 ---------------- */
+.wk-tab {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 14px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 31px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  padding: 8px 20px 10px;
+  margin-bottom: 16px;
+}
+.wk-tab i {
+  font-style: normal;
+  font-size: 26px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+  color: #fff;
+  background: var(--accent);
+  padding: 0 10px 2px;
+  letter-spacing: 0;
+}
+/* ---------------- 分区通用 ---------------- */
+.wk-band { padding: 16px 0; border-bottom: 4px solid var(--ink); }
+.wk-band:last-of-type { border-bottom: 0; }
+
+/* ---------------- 生辰干员 ---------------- */
+.wk-portraits {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 16px 18px;
+}
+.wk-figure { width: 230px; }
+.wk-figure__frame {
+  position: relative;
+  height: 250px;
+  overflow: hidden;
+  background: #eeeae4;
+}
+.wk-figure__frame::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 7px;
+  background: var(--accent);
+}
+/* 半身立绘是窄长图，等比放进方框会留大片空白；改为裁切填满，只保留头肩 */
+.wk-figure__frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 6%;
+}
+.wk-figure__name {
+  padding-top: 10px;
+  text-align: center;
+  font-size: 37px;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+/* 名字过长时自动缩（JS 量完宽度加类） */
+.wk-figure__name--tight { font-size: 30px; letter-spacing: 0; }
+.wk-figure__name--tighter { font-size: 25px; letter-spacing: -0.01em; }
+/* 单人：立绘做封面，右侧大字名号 */
+.wk-portraits--solo { justify-content: flex-start; gap: 40px; align-items: stretch; }
+.wk-portraits--solo .wk-figure { width: 380px; }
+.wk-portraits--solo .wk-figure__frame { height: 396px; }
+.wk-portraits--solo .wk-figure__name { display: none; }
+.wk-solo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.wk-solo__name {
+  font-size: 96px;
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: 0.04em;
+}
+.wk-solo__bar {
+  width: 140px;
+  height: 10px;
+  background: var(--accent);
+  margin: 24px 0 22px;
+}
+.wk-solo__note {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+
+/* ---------------- 情报速递：倒计时特大数字 ---------------- */
+.wk-news__item {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  padding: 12px 0;
+  border-top: 2px solid var(--hair);
+}
+.wk-news__item:first-child { border-top: 0; padding-top: 0; }
+.wk-news__clock {
+  flex: none;
+  width: 268px;
+  display: flex;
+  align-items: baseline;
+  line-height: 0.85;
+  font-variant-numeric: tabular-nums;
+}
+.wk-news__clock b { font-size: 74px; font-weight: 900; }
+.wk-news__clock i {
+  font-style: normal;
+  font-size: 25px;
+  font-weight: 900;
+  color: var(--ink-3);
+  margin: 0 12px 0 3px;
+}
+.wk-news__item--danger .wk-news__clock b { color: var(--accent); }
+.wk-news__body { min-width: 0; }
+.wk-news__head { display: flex; align-items: center; gap: 14px; }
+.wk-news__act {
+  flex: none;
+  font-size: 23px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  border: 3px solid var(--ink);
+  padding: 2px 12px 4px;
+}
+.wk-news__item--danger .wk-news__act {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.wk-news__title {
+  font-size: 36px;
+  font-weight: 900;
+  line-height: 1.3;
+  letter-spacing: 0.02em;
+}
+.wk-news__title b { color: var(--accent); }
+
+/* ---------------- 今日要点 ---------------- */
+.wk-collect__row {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 11px 0;
+  border-top: 2px solid var(--hair);
+}
+.wk-collect__row:first-child { border-top: 0; padding-top: 0; }
+.wk-collect__key {
+  flex: none;
+  width: 176px;
+  font-size: 27px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+}
+.wk-collect__vals {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 30px;
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 1.4;
+}
+
+/* ---------------- 文字衬影：素材图与文字的两种关系 ----------------
+   默认（实心）：图标做成小图砖贴在字前，缩略图下反而多一层颜色识别
+   .wk--ghost：图标退到字后当水印，字加纸色光晕保持可读 */
+.wk-val, .wk-op {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+.wk-val__ico, .wk-op__ico {
+  flex: none;
+  width: 62px;
+  height: 62px;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: drop-shadow(0 2px 3px rgba(20, 19, 26, 0.28));
+}
+.wk-op__ico {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background-size: cover;
+  box-shadow: inset 0 0 0 2px rgba(20, 19, 26, 0.2);
+}
+.wk-shade--none .wk-val__ico, .wk-shade--none .wk-op__ico { display: none; }
+.wk-val em, .wk-op em { font-style: normal; }
+/* 衬影模式：图退到字后 */
+.wk--ghost .wk-val__ico, .wk--ghost .wk-op__ico {
+  position: absolute;
+  left: -26px;
+  top: 50%;
+  width: 92px;
+  height: 92px;
+  transform: translateY(-56%);
+  opacity: 0.32;
+  filter: none;
+  border-radius: 0;
+  box-shadow: none;
+  z-index: 0;
+}
+.wk--ghost .wk-val, .wk--ghost .wk-op { display: inline-block; }
+.wk--ghost .wk-val em, .wk--ghost .wk-op em {
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 0 5px var(--paper), 0 0 10px var(--paper), 0 0 16px var(--paper);
+}
+/* 衬影模式下靠间隔点分隔条目 */
+.wk--ghost .wk-collect__vals { gap: 4px 30px; }
+.wk--ghost .wk-collect__vals .wk-val + .wk-val::before,
+.wk--ghost .wk-ladder__names .wk-op + .wk-op::before {
+  content: "";
+  position: absolute;
+  left: -17px; top: 50%;
+  width: 6px; height: 6px;
+  background: var(--accent);
+  transform: translateY(-50%) rotate(45deg);
+  z-index: 2;
+}
+
+/* ---------------- 名录：星级阶梯（星级只在行首出现一次） ---------------- */
+.wk-split { display: grid; grid-template-columns: 1fr 1fr; gap: 0 36px; }
+.wk-split > div + div { padding-left: 36px; border-left: 3px solid var(--hair); }
+
+.wk-ladder__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  padding: 9px 0;
+  border-top: 2px solid var(--hair);
+}
+.wk-ladder__row:first-child { border-top: 0; padding-top: 0; }
+.wk-ladder__rank {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  margin-top: 4px;
+  min-width: 74px;
+  background: var(--rank-color, var(--ink));
+  color: #fff;
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 1;
+  padding: 5px 11px 7px;
+  font-variant-numeric: tabular-nums;
+}
+.wk-ladder__rank i {
+  font-style: normal;
+  font-size: 20px;
+  font-weight: 900;
+}
+.wk-ladder__names {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 24px;
+  font-size: 33px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+}
+.wk-empty { font-size: 26px; font-weight: 900; color: var(--ink-3); letter-spacing: 0.1em; }
+/* ---------------- 新增关卡：活动名 + 每个关卡集一行 ---------------- */
+.wk-stage {
+  padding: 16px 0 2px;
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+.wk-stage__label {
+  flex: none;
+  padding-top: 2px;
+  font-size: 25px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  color: var(--ink-3);
+}
+.wk-stage__body { min-width: 0; flex: 1; }
+.wk-stage__lead {
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+/* 两列网格：名字列按最长的关卡集名自适应，号段列整齐左对齐 */
+.wk-stage__grid {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  column-gap: 26px;
+}
+.wk-stage__name, .wk-stage__codes {
+  padding: 5px 0;
+  border-top: 2px solid var(--hair);
+}
+.wk-stage__grid > :nth-child(-n+2) { border-top: 0; }
+.wk-stage__name {
+  font-size: 26px;
+  font-weight: 900;
+  color: var(--ink-2);
+}
+.wk-stage__codes {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------- 落款 ---------------- */
+.wk-foot {
+  margin-top: 20px;
+  padding: 14px 44px 16px;
+  background: var(--ink);
+  color: rgba(247, 244, 239, 0.78);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+.wk-foot b { color: var(--paper); font-weight: 900; }
+

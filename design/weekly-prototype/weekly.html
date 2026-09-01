@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>泰拉周刊 · TERRA WEEKLY</title>
+<link rel="stylesheet" href="./node_modules/@fontsource/noto-serif-sc/chinese-simplified-400.css">
+<link rel="stylesheet" href="./node_modules/@fontsource/noto-serif-sc/chinese-simplified-500.css">
+<link rel="stylesheet" href="./node_modules/@fontsource/noto-serif-sc/chinese-simplified-700.css">
+<link rel="stylesheet" href="./node_modules/@fontsource/noto-serif-sc/chinese-simplified-900.css">
+<link rel="stylesheet" href="./css/weekly.css">
+<link rel="stylesheet" href="./css/weekly-dark.css">
+</head>
+<body>
+<div class="wk-frame wk-frame--v1" id="letter">
+  <span class="wk-frame__rule"></span>
+  <span class="wk-corner wk-corner--tl"></span>
+  <span class="wk-corner wk-corner--tr"></span>
+  <span class="wk-corner wk-corner--bl"></span>
+  <span class="wk-corner wk-corner--br"></span>
+  <span class="wk-frame__spine">泰拉周刊<i>TERRA WEEKLY</i></span>
+  <span class="wk-frame__film wk-frame__film--l"></span>
+  <span class="wk-frame__film wk-frame__film--r"></span>
+  <span class="wk-frame__tab">日刊 DAILY</span>
+  <main class="wk" id="card"></main>
+</div>
+
+<script src="./node_modules/lunar-javascript/lunar.js"></script>
+<script src="./js/weekly.js"></script>
+<script>
+// 三套样本：多人生日 / 单人封面 / 无生日，用 ?case=multi|solo|none 切换
+const BIRTHDAYS = [
+  { name: '火龙S黑角', art: './assets/huolongs_heijiao_2.png' },
+  { name: '特克诺', art: './assets/tekenuo_1.png' },
+  { name: '陨星', art: './assets/yunxing_2.png' },
+  { name: '黑角', art: './assets/heijiao_1.png' },
+]
+
+const BASE = {
+  dateText: '9月1日',
+  weekText: '星期二',
+  capturedAtText: '20:13',
+  collectIntro: '以上分区为今日开放，建议在日切前完成一轮理智消耗。',
+  collectMaterial: ['作战记录', '龙门币', '技巧概要'],
+  collectChips: ['术师&狙击', '近卫&特种 职业芯片(组)'],
+  core: [
+    { name: '剿灭作战 & 周常任务（含特勤任务）', action: '刷新', remainingText: '7小时17分钟', urgency: 'danger' },
+    { name: '限时寻访『中坚甄选』', action: '结束', remainingText: '1天7小时46分钟', urgency: 'warn' },
+    { name: '活动『墟·复刻』', action: '结束', remainingText: '3天2小时5分钟', urgency: 'safe' },
+  ],
+  recentOperators: [
+    { name: '珊比', rarity: 6, avatar: './assets/icons/op-shanbi.png' },
+    { name: '予愿安洁莉娜', rarity: 6, avatar: './assets/icons/op-angelina.png' },
+    { name: '时隙', rarity: 5, avatar: './assets/icons/op-shixi.png' },
+    { name: '嘉辛塔', rarity: 5, avatar: './assets/icons/op-jiaxinta.png' },
+  ],
+  // 凭证/甄选这几位没给素材，先借用上面的头像占位（插件里头像由 PRTS 首页直接给出）
+  poolOperators: [
+    { name: '提丰', rarity: 6, avatar: './assets/icons/op-shanbi.png' },
+    { name: '衡沙', rarity: 5, avatar: './assets/icons/op-shixi.png' },
+    { name: '松桐', rarity: 5, avatar: './assets/icons/op-jiaxinta.png' },
+    { name: '云迹', rarity: 4, avatar: './assets/icons/op-angelina.png' },
+  ],
+  // 关卡按 PRTS 首页的分组给：活动名 + 各关卡集
+  stageTitle: 'SideStory 「直到大地变成一颗酸橙」',
+  stageGroups: [
+    { title: '踏上归家长途', codes: 'TO-EX-1 ~ TO-EX-8' },
+    { title: '眺望待行之路', codes: 'TO-S-1 ~ TO-S-4 / TO-MO-1' },
+    { title: '奇象巡展', codes: 'EE-01 ~ EE-05' },
+    { title: '保全派驻#12「废都安保派驻」', codes: 'LT-1 ~ LT-6' },
+  ],
+  stageLine: 'SideStory 「直到大地变成一颗酸橙」 · 踏上归家长途（TO-EX-1 ~ TO-EX-8）',
+}
+
+const CASES = {
+  multi: { ...BASE, birthdays: BIRTHDAYS },
+  solo: { ...BASE, birthdays: [{ name: '异客', art: './assets/yunxing_1.png' }] },
+  none: { ...BASE, birthdays: [] },
+}
+
+const params = new URLSearchParams(location.search)
+const key = params.get('case') || 'multi'
+const data = { ...(CASES[key] || CASES.multi) }
+
+// ?week=1..6,0（一~六、日）：换到该星期，用于出 7 日配色变体
+const WEEK_CN = ['日', '一', '二', '三', '四', '五', '六']
+const weekParam = params.get('week')
+let at = new Date(2026, 8, 1)
+if (weekParam !== null) {
+  const target = Number(weekParam)
+  // 2026-08-31 是星期一，按此推出该星期对应的日期
+  at = new Date(2026, 7, 31 + ((target + 6) % 7))
+  data.dateText = `${at.getMonth() + 1}月${at.getDate()}日`
+  data.weekText = `星期${WEEK_CN[at.getDay()]}`
+}
+
+const theme = params.get('theme') === 'dark' ? 'dark' : 'light'
+const result = window.buildWeekly(data, at, { theme })
+const frame = document.getElementById('letter')
+frame.style.setProperty('--accent', result.accent)
+frame.style.setProperty('--accent-soft', result.accent + '1f')
+if (theme === 'dark') {
+  frame.classList.add('wk--dark')
+  document.body.style.background = '#191920'
+}
+// ?shade=ghost 把素材图切换成「退到字后的水印」模式
+if (params.get('shade') === 'ghost') frame.classList.add('wk--ghost')
+// ?frame=1..6 切外框变体
+const frameId = params.get('frame') || '1'
+frame.classList.remove('wk-frame--v1')
+frame.classList.add(`wk-frame--v${frameId}`)
+document.getElementById('card').innerHTML = result.html
+</script>
+</body>
+</html>

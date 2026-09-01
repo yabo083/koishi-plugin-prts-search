@@ -52,8 +52,12 @@ const RAW_FIXTURE = {
   stageBlocks: [
     {
       title: '新增关卡',
-      intro: ['SideStory 「直到大地变成一颗酸橙」', '踏上归家长途'],
-      codes: ['TO-EX-1 电影防沉迷', 'TO-EX-2 邮包流水线', 'TO-EX-3 地下捉迷藏', 'TO-EX-8 有袋鼷兽奇遇', 'TO-S-1 邮箱保卫战', 'TO-S-4 “家族聚会”', 'TO-MO-1 大涌泉镇盛宴', 'EE-01 奇象收录时间！', 'EE-02 奇象收录时间！'],
+      lead: 'SideStory 「直到大地变成一颗酸橙」',
+      groups: [
+        { title: '踏上归家长途', codes: ['TO-EX-1 电影防沉迷', 'TO-EX-2 邮包流水线', 'TO-EX-3 地下捉迷藏', 'TO-EX-8 有袋鼷兽奇遇'] },
+        { title: '眺望待行之路', codes: ['TO-S-1 邮箱保卫战', 'TO-S-4 “家族聚会”', 'TO-MO-1 大涌泉镇盛宴'] },
+        { title: '奇象巡展', codes: ['EE-01 奇象收录时间！', 'EE-02 奇象收录时间！'] },
+      ],
     },
   ],
 }
@@ -79,8 +83,16 @@ test('mapRawToDailyCard builds the letter card data from raw homepage extract', 
   assert.equal(card.recentOperators.length, 2)
   assert.equal(card.recentOperators[0].rarity, 6)
   assert.deepEqual(card.poolOperators.map((item) => item.name), ['提丰', '云迹'])
+  // 关卡按 PRTS 首页的分组保留：活动名 + 每个关卡集各自的号段
+  assert.equal(card.stageTitle, 'SideStory 「直到大地变成一颗酸橙」')
+  assert.deepEqual(card.stageGroups, [
+    { title: '踏上归家长途', codes: 'TO-EX-1、TO-EX-2、TO-EX-3、TO-EX-8' },
+    { title: '眺望待行之路', codes: 'TO-S-1、TO-S-4 / TO-MO-1' },
+    { title: '奇象巡展', codes: 'EE-01 ~ EE-02' },
+  ])
   assert.match(card.stageLine, /SideStory 「直到大地变成一颗酸橙」/)
-  assert.match(card.stageLine, /TO-EX-1、TO-EX-2、TO-EX-3、TO-EX-8/)
+  assert.match(card.stageLine, /踏上归家长途（TO-EX-1、TO-EX-2、TO-EX-3、TO-EX-8）/)
+  assert.match(card.stageLine, /奇象巡展（EE-01 ~ EE-02）/)
 })
 
 test('compressStageCodes keeps leading zeros and merges contiguous codes', () => {
@@ -155,4 +167,44 @@ test('card style registry falls back to letter for unknown ids', async () => {
   const byName = renderCardHtml(card, { fontsCssLinks: '' })
   assert.equal(byId, byName)
   assert.equal(renderCardByStyle('nonexistent', card, { fontsCssLinks: '' }), byName)
+})
+
+test('renderWeeklyHtml groups operators by rarity and inlines bundled item icons', () => {
+  const { renderWeeklyHtml } = require('../lib/services/card-weekly.js')
+  const card = mapRawToDailyCard(RAW_FIXTURE, { now: NOW })
+  card.birthdays[0].art = 'data:image/png;base64,BBBB'
+  card.recentOperators[0].avatar = 'data:image/png;base64,CCCC'
+  const html = renderWeeklyHtml(card, { fontsCssLinks: '<link rel="stylesheet" href="x.css">' })
+
+  // 截图节点是外框，书脊与内页都在里面
+  assert.match(html, /id="letter"/)
+  assert.match(html, /wk-frame__spine/)
+  // 星级块每档只出现一次：新增 6★/5★ 各一次，凭证甄选合并后 6★ 与 4★ 各一次
+  assert.equal((html.match(/wk-ladder__row" style="--rank-color/g) || []).length, 4)
+  // 生日立绘同时用作顶部色雾
+  assert.match(html, /wk-hero__img[^>]*data:image\/png;base64,BBBB/)
+  assert.match(html, /data:image\/png;base64,CCCC/)
+  // 随包道具图标内联成 data URL；头像缺失时退化为内联 SVG 占位
+  assert.match(html, /wk-val__ico" style="background-image:url\('data:image\/png;base64,/)
+  assert.match(html, /wk-op__ico" style="background-image:url\('data:image\/svg\+xml;base64,/)
+  assert.match(html, /<b>7<\/b><i>时<\/i>/)
+  // 关卡按小节分行，每个关卡集自带小标题
+  assert.match(html, /wk-stage__lead">SideStory 「直到大地变成一颗酸橙」/)
+  assert.match(html, /wk-stage__name">踏上归家长途</)
+  assert.match(html, /wk-stage__codes">TO-EX-1、TO-EX-2、TO-EX-3、TO-EX-8</)
+  assert.match(html, /wk-stage__name">奇象巡展</)
+  // 芯片按职业组合匹配到正确的关卡缩略图（比对随包文件的字节，不看文件名）
+  const chipIcon = (file) => require('node:fs')
+    .readFileSync(require('node:path').join(__dirname, '..', 'assets', 'icons', file)).toString('base64')
+  const tile = (file, text) => `background-image:url('data:image/png;base64,${chipIcon(file)}')"></i><em>${text}`
+  assert.ok(html.includes(tile('chip-medic-defender.png', '医疗&amp;重装')), '医疗&重装 应配固若金汤')
+  assert.ok(html.includes(tile('chip-supporter-vanguard.png', '先锋&amp;辅助')), '先锋&辅助 应配势不可挡')
+  assert.ok(html.includes(tile('chip-guard-specialist.png', '近卫&amp;特种')), '近卫&特种 应配身先士卒')
+})
+
+test('weekly style is registered and asks for operator avatars', () => {
+  const { CARD_STYLES, resolveCardStyle } = require('../lib/services/card-template.js')
+  assert.equal(CARD_STYLES.weekly.label, '泰拉周刊（夜间书脊）')
+  assert.equal(resolveCardStyle('weekly').needsOperatorAvatars, true)
+  assert.equal(resolveCardStyle('letter').needsOperatorAvatars, undefined)
 })

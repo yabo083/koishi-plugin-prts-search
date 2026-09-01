@@ -2,6 +2,7 @@
 // 版式与 design/letter-prototype 保持一致；字体从渲染目录的字体文件相对引用。
 
 import { renderNewspaperHtml } from './card-newspaper'
+import { renderWeeklyHtml } from './card-weekly'
 
 // ==================== 日报风格注册表 ====================
 // 新增风格：实现 render(data, options) 并注册进 CARD_STYLES，配置下拉自动出现新选项。
@@ -9,16 +10,22 @@ export interface CardStyle {
   id: string
   label: string
   render: (data: DailyCardData, options: { fontsCssLinks: string }) => string
+  /** 版式需要「近期新增 / 凭证甄选」干员的头像时置为 true，抓取阶段才会去拉头像 */
+  needsOperatorAvatars?: boolean
 }
 
 export const CARD_STYLES: Record<string, CardStyle> = {
   letter: { id: 'letter', label: '今日信笺（手账风）', render: renderCardHtml },
+  weekly: { id: 'weekly', label: '泰拉周刊（夜间书脊）', render: renderWeeklyHtml, needsOperatorAvatars: true },
   newspaper: { id: 'newspaper', label: '泰拉晨报（报纸风）', render: renderNewspaperHtml },
 }
 
+export function resolveCardStyle(styleId: string | undefined): CardStyle {
+  return CARD_STYLES[styleId || ''] ?? CARD_STYLES.letter
+}
+
 export function renderCardByStyle(styleId: string | undefined, data: DailyCardData, options: { fontsCssLinks: string }): string {
-  const style = CARD_STYLES[styleId || ''] ?? CARD_STYLES.letter
-  return style.render(data, options)
+  return resolveCardStyle(styleId).render(data, options)
 }
 export interface SealSlot {
   ch: string
@@ -36,6 +43,8 @@ export interface DailyCoreItem {
 export interface DailyOperator {
   name: string
   rarity: number
+  /** 首页头像直链；「泰拉周刊」用它做名字前的圆形图砖，抓取失败时留空由渲染器兜底 */
+  avatar?: string
 }
 
 export interface DailyBirthdayOperator {
@@ -46,6 +55,13 @@ export interface DailyBirthdayOperator {
   art: string
   tilt: number
   tape: string
+}
+
+export interface DailyStageGroup {
+  /** 关卡集名，如「踏上归家长途」 */
+  title: string
+  /** 压缩后的号段，如「TO-EX-1 ~ TO-EX-8」 */
+  codes: string
 }
 
 export interface DailyCardData {
@@ -60,7 +76,12 @@ export interface DailyCardData {
   birthdays: DailyBirthdayOperator[]
   recentOperators: DailyOperator[]
   poolOperators: DailyOperator[]
+  /** 单行版关卡信息（今日信笺 / 泰拉晨报用） */
   stageLine: string
+  /** 活动名，如「SideStory 「直到大地变成一颗酸橙」」 */
+  stageTitle: string
+  /** 各关卡集（泰拉周刊按这个分行排） */
+  stageGroups: DailyStageGroup[]
 }
 
 // 农历日期印章：如「七月初九」→ 右上七、右下月、左上初、左下九（传统右起竖读）

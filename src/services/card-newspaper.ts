@@ -245,8 +245,6 @@ export function renderNewspaperHtml(data: DailyCardData, options: { fontsCssLink
 <meta charset="UTF-8">
 <title>泰拉晨报</title>
 ${options.fontsCssLinks}
-<link rel="stylesheet" href="./fonts/serif/chinese-simplified-400.css">
-<link rel="stylesheet" href="./fonts/serif/chinese-simplified-700.css">
 <style>${NEWSPAPER_CSS}:root{${themeCss}}</style>
 </head>
 <body>

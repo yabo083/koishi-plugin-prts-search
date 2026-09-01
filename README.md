@@ -4,7 +4,11 @@ Miyako 游戏情报插件。提供 PRTS 每日「今日信笺」情报卡片（�
 
 ## 功能
 
-- **每日情报信笺**：每天按 `refreshCron` 自动抓取 PRTS 首页，渲染手账风「今日信笺」卡片——今日资源收集、核心动态倒计时、生日干员半身立绘贴画、近期新增干员与关卡，并通过 `scheduledPush` 定时推送到指定群。卡片按配置自动运行；`prts d`（手动出图）、`prts r`（强制重渲）、`prts cache`（缓存诊断）为调试命令。
+- **每日情报卡片**：每天按 `refreshCron` 自动抓取 PRTS 首页，渲染成情报卡片——今日资源收集、核心动态倒计时、生日干员半身立绘、近期新增干员与关卡，并通过 `scheduledPush` 定时推送到指定群。卡片按配置自动运行；`prts d`（手动出图）、`prts r`（强制重渲）、`prts cache`（缓存诊断）为调试命令。
+- **卡片风格**（`cardStyle`）：
+  - `letter` 今日信笺（手账风）：米白信纸 + 手写体 + 立绘贴画。
+  - `weekly` 泰拉周刊（夜间书脊）：深底 + 立绘光晕 + 磨砂玻璃分区卡 + 左侧强调色书脊，强调色按星期轮换。版面按「群聊压到 400px 宽仍可读」定尺，正文不小于 26px。
+  - `newspaper` 泰拉晨报（报纸风）：宋体分栏 + 双细线，早期版本。
 - `w <关键词>`：检索 Warfarin Wiki 官方资料和本地全文缓存；默认一次返回 5 条消息，每条 5 项。
 - `w <编号>`：查看上一轮检索结果详情，例如 `w 1`。
 - `w+` / `w-` / `w+2`：翻页或跳转到指定页。
@@ -12,7 +16,7 @@ Miyako 游戏情报插件。提供 PRTS 每日「今日信笺」情报卡片（�
 
 ## 运行要求
 
-- 「今日信笺」渲染需要 Koishi `puppeteer` 服务；字体（霞鹜文楷 Lite / 志莽行书）随 npm 依赖自动安装，无需系统字体。
+- 「今日信笺」渲染需要 Koishi `puppeteer` 服务；字体（霞鹜文楷 Lite / 志莽行书 / Noto Serif SC）随 npm 依赖自动安装，无需系统字体。
 - `w` 官方资料检索需要能访问 Warfarin Wiki API。
 - Warfarin 全文检索使用本地缓存和远程压缩包更新；运行中的插件不会自行全量爬取 Warfarin 源站文本接口。
 
@@ -22,6 +26,7 @@ Miyako 游戏情报插件。提供 PRTS 每日「今日信笺」情报卡片（�
 plugins:
   miyako-intel:
     dailyCardEnabled: true
+    cardStyle: weekly
     logLevel: info
     refreshCron: 5 4 * * *
     scheduledPush:
@@ -50,7 +55,10 @@ Warfarin 全文数据随包带一份中文种子；后续更新只读取远程 m
 
 ## 设计
 
-「今日信笺」版式原型见 `design/letter-prototype/`（可在任意静态服务器打开预览）。
+- 「今日信笺」版式原型见 `design/letter-prototype/`。
+- 「泰拉周刊」版式原型见 `design/weekly-prototype/`（含七日配色、七版外框、夜间模式对比页，以及模拟群聊压缩的验证脚本）。
+
+道具与芯片图标是固定素材，随包放在 `assets/icons/`，渲染时内联成 data URL；干员头像与生日立绘运行时从 PRTS 抓取，头像抓不到时退化为内联 SVG 占位。
 
 ## 开发
 

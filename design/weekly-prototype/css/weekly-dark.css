@@ -1,0 +1,195 @@
+/* ================================================================
+   泰拉周刊 · 夜间模式（.wk--dark）
+   现代 UI 语言：深底 + 立绘光晕（acrylic）+ 磨砂玻璃分区卡 + 蒙版 + 多层阴影
+   约束不变：整图会被压到 ~400px 宽，所以玻璃只做「底」，字与色块该重的照旧重
+   ================================================================ */
+
+.wk--dark {
+  --paper: #101015;
+  --ink: #f5f2ec;
+  --ink-2: rgba(245, 242, 236, 0.76);
+  --ink-3: rgba(245, 242, 236, 0.52);
+  --hair: rgba(245, 242, 236, 0.16);
+  --glass: rgba(255, 255, 255, 0.05);
+  --glass-line: rgba(255, 255, 255, 0.11);
+  --glass-top: rgba(255, 255, 255, 0.14);
+  --shadow: 0 14px 34px rgba(0, 0, 0, 0.42);
+}
+
+.wk--dark .wk {
+  background: radial-gradient(120% 70% at 50% -10%, #1d1d27 0%, #101015 58%, #0c0c11 100%);
+  color: var(--ink);
+}
+
+/* ---------- 立绘光晕：把封面立绘糊成一层色雾垫在顶部 ---------- */
+.wk--dark .wk-hero {
+  display: block;
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  height: 620px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.wk--dark .wk-hero__img {
+  position: absolute;
+  inset: -80px -40px auto -40px;
+  height: 620px;
+  background-position: 50% 22%;
+  background-size: cover;
+  filter: blur(52px) saturate(165%) brightness(0.78);
+  opacity: 0.78;
+}
+/* 蒙版：上密下透，保证顶部报头字压得住、底部干净收掉 */
+.wk--dark .wk-hero__scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(10, 10, 15, 0.5) 0%, rgba(10, 10, 15, 0.42) 40%, rgba(16, 16, 21, 0.94) 86%, #101015 100%);
+}
+.wk--dark .wk-body, .wk--dark .wk-cap, .wk--dark .wk-foot { position: relative; z-index: 1; }
+/* ---------- 报头：玻璃条，不再是实心黑块 ---------- */
+.wk--dark .wk-cap {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+  backdrop-filter: blur(16px) saturate(130%);
+  border-bottom: 1px solid var(--glass-line);
+  box-shadow: inset 0 1px 0 var(--glass-top);
+  color: var(--ink);
+}
+.wk--dark .wk-cap__title { text-shadow: 0 4px 20px rgba(0, 0, 0, 0.55); }
+.wk--dark .wk-cap__en { color: rgba(245, 242, 236, 0.62); }
+.wk--dark .wk-cap__date { text-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); }
+.wk--dark .wk-cap__clip { color: rgba(245, 242, 236, 0.66); }
+.wk--dark .wk-cap__week {
+  background: var(--accent);
+  color: #14131a;
+  border-radius: 6px;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+/* ---------- 分区：磨砂玻璃卡，取代印刷粗分隔线 ---------- */
+.wk--dark .wk-body { padding: 18px 26px 4px; }
+.wk--dark .wk-band {
+  /* 内宽要留够 4 张 230px 立绘：1080 - 26*2 - 20*2 = 988 */
+  padding: 16px 20px 18px;
+  margin-bottom: 11px;
+  border: 1px solid var(--glass-line);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.028));
+  backdrop-filter: blur(18px) saturate(125%);
+  box-shadow: var(--shadow), inset 0 1px 0 var(--glass-top);
+}
+.wk--dark .wk-band:last-of-type { margin-bottom: 0; }
+
+/* ---------- 栏目标签：亮块压深底，缩略图里最先被看到 ---------- */
+.wk--dark .wk-tab {
+  background: rgba(245, 242, 236, 0.94);
+  color: #14131a;
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+.wk--dark .wk-tab i {
+  background: var(--accent);
+  color: #14131a;
+  border-radius: 5px;
+}
+/* ---------- 生辰立绘：圆角图卡 + 底部渐隐蒙版 ---------- */
+.wk--dark .wk-figure__frame {
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.5), inset 0 0 0 1px var(--glass-line);
+}
+.wk--dark .wk-figure__frame::after { height: 6px; border-radius: 0 0 16px 16px; }
+.wk--dark .wk-figure__name { color: var(--ink); text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5); }
+.wk--dark .wk-solo__note { color: var(--ink-2); }
+.wk--dark .wk-solo__bar { border-radius: 5px; box-shadow: 0 4px 16px color-mix(in srgb, var(--accent) 50%, transparent); }
+
+/* ---------- 倒计时：强调色 + 光晕 ---------- */
+.wk--dark .wk-news__item { border-top-color: var(--hair); }
+.wk--dark .wk-news__clock b { color: var(--ink); }
+.wk--dark .wk-news__item--danger .wk-news__clock b {
+  color: var(--accent);
+  text-shadow: 0 0 26px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.wk--dark .wk-news__act {
+  border-color: var(--hair);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.06);
+}
+.wk--dark .wk-news__item--danger .wk-news__act {
+  background: var(--accent);
+  border-color: transparent;
+  color: #14131a;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+.wk--dark .wk-news__title b { color: var(--accent); }
+
+/* ---------- 今日可刷 / 名录 ---------- */
+.wk--dark .wk-collect__row, .wk--dark .wk-ladder__row { border-top-color: var(--hair); }
+.wk--dark .wk-collect__key { color: var(--ink-3); }
+.wk--dark .wk-val__ico { filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.6)); }
+.wk--dark .wk-op__ico { box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.24), 0 4px 12px rgba(0, 0, 0, 0.5); }
+.wk--dark .wk-split > div + div { border-left-color: var(--hair); }
+.wk--dark .wk-ladder__rank {
+  border-radius: 8px;
+  /* 星级块在深底上要提亮：把行内的星级色往白里兑，字改深色，缩略图里最跳 */
+  background: color-mix(in srgb, var(--rank-color) 68%, #fff 32%);
+  color: #14131a;
+  box-shadow: 0 5px 14px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+.wk--dark .wk-stage__label { color: var(--ink-3); }
+.wk--dark .wk-stage__text { color: var(--ink-2); }
+.wk--dark .wk-empty { color: var(--ink-3); }
+
+/* ---------- 落款：玻璃条 ---------- */
+.wk--dark .wk-foot {
+  margin: 13px 26px 17px;
+  padding: 12px 22px 14px;
+  border: 1px solid var(--glass-line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.045);
+  backdrop-filter: blur(14px);
+  color: var(--ink-3);
+  box-shadow: inset 0 1px 0 var(--glass-top);
+}
+.wk--dark .wk-foot b { color: var(--ink); }
+/* ================================================================
+   夜间模式下的三个外框（V2 书脊 / V3 出血框 / V7 出血框+标签）
+   纯黑边在深色聊天背景里会消失，所以边框改成「强调色染过的深色」+ 内侧亮线
+   ================================================================ */
+.wk--dark.wk-frame {
+  box-shadow: 0 26px 64px rgba(0, 0, 0, 0.62);
+  background: #0d0d12;
+}
+
+/* V2 装订书脊 */
+.wk--dark.wk-frame--v2 { border-color: rgba(255, 255, 255, 0.15); }
+.wk--dark.wk-frame--v2 .wk-frame__spine {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent) 88%, #fff 12%), color-mix(in srgb, var(--accent) 62%, #000 38%));
+  color: #14131a;
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.28), 6px 0 22px rgba(0, 0, 0, 0.45);
+}
+.wk--dark.wk-frame--v2 .wk-frame__spine i { opacity: 0.62; }
+
+/* V3 出血墨框 */
+.wk--dark.wk-frame--v3 { border-color: color-mix(in srgb, var(--accent) 22%, #0a0a0e); }
+.wk--dark.wk-frame--v3 .wk-frame__rule {
+  border-color: color-mix(in srgb, var(--accent) 88%, #fff 12%);
+  box-shadow: 0 0 26px color-mix(in srgb, var(--accent) 32%, transparent);
+}
+
+/* V7 出血墨框 + 右上标签 */
+.wk--dark.wk-frame--v7 { border-color: color-mix(in srgb, var(--accent) 22%, #0a0a0e); }
+.wk--dark.wk-frame--v7 .wk-frame__rule {
+  border-color: color-mix(in srgb, var(--accent) 88%, #fff 12%);
+  box-shadow: 0 0 26px color-mix(in srgb, var(--accent) 32%, transparent);
+}
+.wk--dark.wk-frame--v7 .wk-frame__tab,
+.wk--dark.wk-frame--v6 .wk-frame__tab {
+  background: color-mix(in srgb, var(--accent) 92%, #fff 8%);
+  color: #14131a;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+}
+
