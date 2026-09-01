@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto'
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { basename, join, resolve } from 'node:path'
 import { gzipSync } from 'node:zlib'
-import { createWarfarinAnchorsFromDetail } from '../lib/services/warfarin-story-search.js'
+import { createWarfarinAnchorsFromDetail } from '../lib/services/warfarin-story-parsers.js'
 
 const rawRoot = resolve(process.argv[2] || 'E:/Codes/Crawler/warfarin_backend/EF-textsearcher/src/data/warfarin')
 const outFile = resolve(process.argv[3] || 'src/services/warfarin-story-seed.ts')

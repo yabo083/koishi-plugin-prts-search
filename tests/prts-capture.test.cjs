@@ -173,7 +173,7 @@ test('calculates PRTS cache day by 04:00 Asia/Shanghai boundary', () => {
 })
 
 test('cron matcher supports annual schedules by matching current minute only', () => {
-  const { matchesCronExpression } = require(path.join(rootDir, 'lib', 'services', 'cron.js'))
+  const { matchesCronExpression } = require(path.join(rootDir, 'lib', 'core', 'cron.js'))
 
   assert.equal(matchesCronExpression('0 0 1 1 *', { minute: 0, hour: 0, day: 1, month: 1, weekday: 4 }), true)
   assert.equal(matchesCronExpression('0 0 1 1 *', { minute: 1, hour: 0, day: 1, month: 1, weekday: 4 }), false)
@@ -1042,7 +1042,6 @@ test('scheduled push only broadcasts to allowed channels when enabled', async ()
   await intervals[0].callback()
   await new Promise((resolve) => setTimeout(resolve, 20))
 
-  require('node:fs').writeFileSync('tests/.dbg.json', JSON.stringify({ calls, loggerLines, broadcast: broadcastCalls.length }))
   assert.equal(broadcastCalls.length, 1)
   assert.deepEqual(broadcastCalls[0].channels, ['sandbox:group-1', 'sandbox:group-2'])
   assert.equal(calls.filter((item) => item === 'captureDaily').length, 1)

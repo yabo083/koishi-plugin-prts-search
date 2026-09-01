@@ -1,5 +1,5 @@
 // 「泰拉晨报」报纸风格：宋体、分栏、双细线、朱红点缀
-import { DailyCardData, DailyOperator } from './card-template'
+import { DailyCardData, DailyOperator } from './card-types'
 import { getNewspaperTheme, newspaperThemeVars } from './card-newspaper-theme'
 
 const NEWSPAPER_CSS = `

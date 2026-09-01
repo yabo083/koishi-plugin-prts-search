@@ -4,10 +4,22 @@ const path = require('node:path')
 
 const rootDir = path.resolve(__dirname, '..')
 const builtFile = path.join(rootDir, 'lib', 'services', 'warfarin-wiki.js')
+const builtFormatFile = path.join(rootDir, 'lib', 'wiki', 'format.js')
+const builtToolsFile = path.join(rootDir, 'lib', 'wiki', 'chatluna-tools.js')
 
 function loadWiki() {
   delete require.cache[builtFile]
   return require(builtFile)
+}
+
+function loadFormat() {
+  delete require.cache[builtFormatFile]
+  return require(builtFormatFile)
+}
+
+function loadChatLunaTools() {
+  delete require.cache[builtToolsFile]
+  return require(builtToolsFile)
 }
 
 test('warfarin wiki client uses official search for accurate totals', async () => {
@@ -158,7 +170,7 @@ test('warfarin wiki client preserves fetch failure cause for logs', async () => 
 })
 
 test('formats search results and context for chat reading', () => {
-  const { formatWikiSearchResults, formatWikiContext } = loadWiki()
+  const { formatWikiSearchResults, formatWikiContext } = loadFormat()
   const searchText = formatWikiSearchResults({
     keyword: '息壤',
     offset: 0,
@@ -221,7 +233,7 @@ test('formats search results and context for chat reading', () => {
 })
 
 test('formats story details without repeated source and includes mission code', () => {
-  const { formatWikiContext } = loadWiki()
+  const { formatWikiContext } = loadFormat()
 
   const text = formatWikiContext({
     anchor: { anchor_id: 'e10m4_0', content: '火锅剧情。', source: '任务剧情：志同道合', scope: 'missions', relevance: 1 },
@@ -239,7 +251,7 @@ test('formats story details without repeated source and includes mission code', 
 })
 
 test('formats non-dialog details with source page link', () => {
-  const { formatWikiContext } = loadWiki()
+  const { formatWikiContext } = loadFormat()
 
   const text = formatWikiContext({
     anchor: { anchor_id: 'eny_0007_mimicw_0', content: '潜地虬兽。腐蚀金属。', source: '敌人资料：潜地虬兽', scope: 'enemies', relevance: 1, url: 'https://warfarin.wiki/cn/enemies/eny_0007_mimicw' },
@@ -253,7 +265,7 @@ test('formats non-dialog details with source page link', () => {
 })
 
 test('chatluna tool adapter exposes search and context tools', async () => {
-  const { createWarfarinWikiTools } = loadWiki()
+  const { createWarfarinWikiTools } = loadChatLunaTools()
   const calls = []
   const client = {
     async search(input) {

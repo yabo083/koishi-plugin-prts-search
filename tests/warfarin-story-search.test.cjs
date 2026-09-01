@@ -10,10 +10,16 @@ const zlib = require('node:zlib')
 
 const rootDir = path.resolve(__dirname, '..')
 const builtFile = path.join(rootDir, 'lib', 'services', 'warfarin-story-search.js')
+const parsersFile = path.join(rootDir, 'lib', 'services', 'warfarin-story-parsers.js')
 
 function loadStorySearch() {
   delete require.cache[builtFile]
   return require(builtFile)
+}
+
+function loadStoryParsers() {
+  delete require.cache[parsersFile]
+  return require(parsersFile)
 }
 
 test('built-in story search update without bundle keeps local story text and never crawls source', async () => {
@@ -641,7 +647,7 @@ test('story bundle builder does not reuse anchors from older parser versions', (
 })
 
 test('Warfarin detail parser builds searchable anchors for non-mission text', () => {
-  const { createWarfarinAnchorsFromDetail } = loadStorySearch()
+  const { createWarfarinAnchorsFromDetail } = loadStoryParsers()
 
   const baker = createWarfarinAnchorsFromDetail('baker', 'a-culinary-invitation', {
     summary: { name: '美食邀请' },
@@ -687,7 +693,7 @@ test('Warfarin detail parser builds searchable anchors for non-mission text', ()
 })
 
 test('Warfarin Baker parser groups API option branches and keeps character metadata searchable', () => {
-  const { createWarfarinAnchorsFromDetail } = loadStorySearch()
+  const { createWarfarinAnchorsFromDetail } = loadStoryParsers()
 
   const baker = createWarfarinAnchorsFromDetail('baker', 'the-path-walked-alone', {
     summary: { name: '独行之路' },
@@ -715,7 +721,7 @@ test('Warfarin Baker parser groups API option branches and keeps character metad
 })
 
 test('Warfarin item parser skips achievement item shells in favor of medal anchors', () => {
-  const { createWarfarinAnchorsFromDetail } = loadStorySearch()
+  const { createWarfarinAnchorsFromDetail } = loadStoryParsers()
 
   const anchors = createWarfarinAnchorsFromDetail('items', 'achv_adv_wuling_campfire_1_1', {
     itemTable: { id: 'achv_adv_wuling_campfire_1_1', name: '锚定武陵奖章·Ⅰ', desc: '锚定武陵奖章·Ⅰ', decoDesc: '您已初步唤醒了武陵的协议网络。' },
@@ -725,7 +731,7 @@ test('Warfarin item parser skips achievement item shells in favor of medal ancho
 })
 
 test('Warfarin medal parser includes category and matched group labels', () => {
-  const { createWarfarinAnchorsFromDetail } = loadStorySearch()
+  const { createWarfarinAnchorsFromDetail } = loadStoryParsers()
 
   const medal = createWarfarinAnchorsFromDetail('medals', 'anchored-to-wuling', {
     achievementTable: {
@@ -749,7 +755,7 @@ test('Warfarin medal parser includes category and matched group labels', () => {
 })
 
 test('Warfarin mission parser sorts radio blocks by natural radio id order', () => {
-  const { createStoryAnchorFromMission } = loadStorySearch()
+  const { createStoryAnchorFromMission } = loadStoryParsers()
 
   const anchor = createStoryAnchorFromMission('a1m9', {
     mission: { name: '武陵特厨' },

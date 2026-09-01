@@ -3,16 +3,17 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { h } from 'koishi'
+import { TIMEZONE } from '../core/constants'
+import { matchesCronExpression } from '../core/cron'
+import { formatError } from '../core/errors'
+import { getZonedParts } from '../core/time'
 import { CachedImageResult, CaptureKind } from '../types'
-import { DailyCardData, DailyCoreItem, DailyOperator, SealSlot, buildSealSlots, renderCardByStyle, resolveCardStyle } from './card-template'
-import { DailyImageCache, getZonedParts } from './cache'
-import { matchesCronExpression } from './cron'
+import { buildSealSlots, renderCardByStyle, resolveCardStyle } from './card-template'
+import { DailyCardData, DailyCoreItem, DailyOperator, SealSlot } from './card-types'
+import { DailyImageCache } from './cache'
 
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
 const HOMEPAGE_URL = 'https://prts.wiki/w/%E9%A6%96%E9%A1%B5'
-const TIMEZONE = 'Asia/Shanghai'
-const CACHE_DIRECTORY = 'data/miyako-intel/cache'
 const NAVIGATION_TIMEOUT_MS = 45000
 const RENDER_DELAY_MS = 800
 const VIEWPORT = { width: 1280, height: 900, deviceScaleFactor: 1 }
@@ -240,15 +241,6 @@ export function mapRawToDailyCard(raw: RawDailyData, options: { now: Date }): Da
 
 /* ==================== 服务 ==================== */
 
-export const DEFAULT_CACHE_MAINTENANCE = {
-  enabled: true,
-  keepRecentDays: 7,
-  archiveEnabled: true,
-  archiveDirectory: 'archives',
-  archiveCron: '30 4 * * *',
-  deleteAfterArchive: true,
-}
-
 function defaultFetcher(url: string, init?: DailyRequestInit): Promise<any> {
   return (async () => {
     const response = await fetch(url, {
@@ -271,7 +263,7 @@ export class PrtsCaptureService {
   }
 
   constructor(
-    private readonly ctx: any,
+    private readonly ctx: { puppeteer?: { page: () => Promise<any> } },
     private readonly cache: DailyImageCache,
     private readonly logger: { warn: (message: string) => void; info: (message: string) => void; debug?: (message: string) => void },
     private readonly options: { refreshCron?: string; fetcher?: DailyFetcher; nowProvider?: () => Date; styleId?: string } = {},
@@ -279,10 +271,6 @@ export class PrtsCaptureService {
 
   async getDailyInfo(force = false): Promise<CachedImageResult> {
     return this.resolveCachedImage('daily', force, () => this.captureDailyCard())
-  }
-
-  toBroadcastMessage(result: CachedImageResult) {
-    return h.image(this.toDataUrl(result))
   }
 
   async refreshDue() {
@@ -529,10 +517,6 @@ export class PrtsCaptureService {
     }
     await new Promise((resolve) => setTimeout(resolve, RENDER_DELAY_MS))
   }
-
-  private toDataUrl(result: CachedImageResult) {
-    return `data:${result.mimeType || 'image/png'};base64,${result.buffer.toString('base64')}`
-  }
 }
 
 async function copyInto(sourceDir: string, targetDir: string, files: string[], fileFilter?: RegExp) {
@@ -583,10 +567,3 @@ function ensureBuffer(source: unknown): Buffer {
     : typeof source
   throw new Error(`截图结果不是有效二进制数据，实际类型: ${typeName || 'unknown'}`)
 }
-
-function formatError(error: unknown) {
-  return error instanceof Error ? error.message : String(error)
-}
-
-// CACHE_DIRECTORY 由 DailyImageCache 构造参数传入（不再作为用户配置）
-export const DAILY_CACHE_DIRECTORY = CACHE_DIRECTORY

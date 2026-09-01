@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { gunzipSync, gzipSync } from 'node:zlib'
-import { createWarfarinAnchorsFromDetail } from '../lib/services/warfarin-story-search.js'
+import { createWarfarinAnchorsFromDetail } from '../lib/services/warfarin-story-parsers.js'
 import { bundledStorySeedCount, loadBundledStorySeed } from '../lib/services/warfarin-story-seed.js'
 
 const language = process.env.STORY_LANGUAGE || 'cn'

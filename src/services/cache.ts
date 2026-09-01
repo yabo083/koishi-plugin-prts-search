@@ -3,50 +3,19 @@ import path from 'node:path'
 import { gzip, gunzip } from 'node:zlib'
 import { promisify } from 'node:util'
 import { CacheMaintenanceConfig, CacheManifest, CaptureKind } from '../types'
+import { getPrtsDayKey } from '../core/time'
 
 const gzipAsync = promisify(gzip)
 const gunzipAsync = promisify(gunzip)
 
-export function getPrtsDayKey(date = new Date(), timezone = 'Asia/Shanghai', refreshHour = 4): string {
-  const parts = getZonedParts(date, timezone)
-  let year = parts.year
-  let month = parts.month
-  let day = parts.day
-
-  if (parts.hour < refreshHour) {
-    const previous = new Date(Date.UTC(year, month - 1, day) - 24 * 60 * 60 * 1000)
-    year = previous.getUTCFullYear()
-    month = previous.getUTCMonth() + 1
-    day = previous.getUTCDate()
-  }
-
-  return `${year}-${pad2(month)}-${pad2(day)}`
-}
-
-export function getZonedParts(date: Date, timezone: string) {
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: timezone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-  })
-
-  const values = new Map<string, string>()
-  for (const part of formatter.formatToParts(date)) {
-    if (part.type !== 'literal') values.set(part.type, part.value)
-  }
-
-  return {
-    year: Number(values.get('year')),
-    month: Number(values.get('month')),
-    day: Number(values.get('day')),
-    hour: Number(values.get('hour')),
-    minute: Number(values.get('minute')),
-    weekday: new Date(Date.UTC(Number(values.get('year')), Number(values.get('month')) - 1, Number(values.get('day')))).getUTCDay(),
-  }
+/** 归档保留策略的默认值：留最近 7 天，更早的按月打包成 gz 后删掉原目录 */
+export const DEFAULT_CACHE_MAINTENANCE = {
+  enabled: true,
+  keepRecentDays: 7,
+  archiveEnabled: true,
+  archiveDirectory: 'archives',
+  archiveCron: '30 4 * * *',
+  deleteAfterArchive: true,
 }
 
 export class DailyImageCache {
@@ -278,8 +247,4 @@ function groupByMonth(dayKeys: string[]) {
     result.set(monthKey, group)
   }
   return result
-}
-
-function pad2(value: number) {
-  return String(value).padStart(2, '0')
 }

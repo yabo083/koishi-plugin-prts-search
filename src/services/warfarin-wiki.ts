@@ -1,3 +1,5 @@
+import { defaultUserAgent } from '../core/constants'
+
 export interface WarfarinWikiAnchor {
   anchor_id: string
   content: string
@@ -41,13 +43,6 @@ export interface WarfarinWikiContextInput {
   anchorId: string
   needSummary?: boolean
   contextRange?: number
-}
-
-export interface ChatLunaToolDefinition {
-  name: string
-  description: string
-  parameters: Record<string, any>
-  execute: (input: Record<string, any>) => Promise<any>
 }
 
 interface ApiEnvelope<T> {
@@ -175,92 +170,6 @@ export class WarfarinWikiClient {
   }
 }
 
-export const defaultUserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/125 Safari/537.36 miyako-intel'
-
-export function formatWikiSearchResults(result: WarfarinWikiSearchResult & { keyword: string; offset?: number; pageSize?: number; commandName?: string; sourceLabel?: string; showSourceLabel?: boolean; dataUpdatedLabel?: string }) {
-  const keyword = normalizeKeyword(result.keyword)
-  const commandName = result.commandName || 'w'
-  const sourceLabel = result.sourceLabel || 'Warfarin Wiki 官方搜索'
-  const showSourceLabel = result.showSourceLabel !== false
-  const dataUpdatedLabel = String(result.dataUpdatedLabel || '').trim()
-  const dataUpdatedLine = dataUpdatedLabel ? `数据更新时间：${dataUpdatedLabel}` : ''
-  if (!result.results.length) return [`Warfarin Wiki 检索：${keyword}`, dataUpdatedLine, showSourceLabel ? `信息源：${sourceLabel}` : '', '没有找到相关资料。'].filter(Boolean).join('\n')
-  const offset = clampInteger(result.offset, 0, 0, Math.max(0, result.results.length - 1))
-  const pageSize = clampInteger(result.pageSize, 5, 1, 20)
-  const visible = result.results.slice(offset, offset + pageSize)
-  const total = Math.max(result.total || 0, result.results.length)
-  const totalPages = Math.max(1, Math.ceil(total / pageSize))
-  const lines = [
-    `Warfarin Wiki 检索：${keyword} | 共 ${total} 条，可用页码 [1-${totalPages}] | 输入 ${commandName} 序号 查看，${commandName}+ 下一页，${commandName}- 上一页，${commandName}+页码 跳页。`,
-    dataUpdatedLine,
-    showSourceLabel ? `信息源：${sourceLabel}` : '',
-    '',
-  ].filter((line, index) => line || index === 3)
-
-  visible.forEach((item, index) => {
-    lines.push(`${offset + index + 1}. ${formatWikiSourceTitle(item)}`)
-    lines.push(`   ${excerptAroundKeyword(item.content, keyword, 110)}`)
-  })
-  return lines.join('\n')
-}
-
-export function formatWikiContext(result: WarfarinWikiContextResult) {
-  const source = result.source_ref || result.anchor.source
-  const sourceParts = splitWikiSource(source)
-  const missionMeta = getMissionMeta(result.anchor)
-  const metadata = [`名称：${sourceParts.title}`, `类型：${sourceParts.category}`]
-  if (missionMeta) metadata.push(`任务编号：${missionMeta.code}`)
-  metadata.push('来源：Warfarin Wiki')
-  const lines = [metadata.join(' | ')]
-  if (result.summary) lines.push(`摘要：${result.summary}`)
-  lines.push('', '正文：')
-  for (const row of result.full_text || []) {
-    const speaker = String(row.speaker || '').replace(/\{[^{}]*\}/g, '').trim() || '旁白'
-    const scene = String(row.scene || '').trim()
-    const text = String(row.text || '').trim()
-    if (!text) continue
-    if (scene && speaker !== '通讯') lines.push(`${scene} / ${speaker}：${text}`)
-    else if (scene) lines.push(`${scene}：${text}`)
-    else lines.push(`${speaker}：${text}`)
-  }
-  if (lines.at(-1) === '正文：') lines.push(result.anchor.content || '暂无正文。')
-  if (result.anchor.url) lines.push('', `详情：${result.anchor.url}`)
-  return lines.join('\n')
-}
-
-export function formatWikiSourceTitle(anchor: Pick<WarfarinWikiAnchor, 'anchor_id' | 'source' | 'scope'>) {
-  return anchor.source
-}
-
-export function createWarfarinWikiTools(client: Pick<WarfarinWikiClient, 'search' | 'context'>): ChatLunaToolDefinition[] {
-  return [
-    {
-      name: 'warfarin_wiki_search',
-      description: 'Search Warfarin Wiki official index by keyword.',
-      parameters: { type: 'object', properties: { keyword: { type: 'string' } }, required: ['keyword'] },
-      execute: (input) => client.search({ keyword: String(input.keyword || '') }),
-    },
-    {
-      name: 'warfarin_wiki_context',
-      description: 'Fetch best-effort source context for a Warfarin Wiki slug or anchor id.',
-      parameters: {
-        type: 'object',
-        properties: {
-          anchor_id: { type: 'string' },
-          need_summary: { type: 'boolean' },
-          context_range: { type: 'number', minimum: 0, maximum: 10 },
-        },
-        required: ['anchor_id'],
-      },
-      execute: (input) => client.context({
-        anchorId: String(input.anchor_id || ''),
-        needSummary: input.need_summary === true,
-        contextRange: input.context_range === undefined ? undefined : Number(input.context_range),
-      }),
-    },
-  ]
-}
-
 export function clampInteger(value: unknown, fallback: number, min: number, max: number) {
   const numeric = Number(value)
   if (!Number.isFinite(numeric)) return fallback
@@ -291,7 +200,8 @@ export function foldVariantDuplicates(results: WarfarinWikiAnchor[]): WarfarinWi
   }))
 }
 
-function normalizeKeyword(keyword: string) {
+/** 关键词归一化：文本层拼标题要跟检索口径一致，故导出 */
+export function normalizeKeyword(keyword: string) {
   return String(keyword || '').trim().replace(/\s+/g, ' ')
 }
 
@@ -325,41 +235,6 @@ function officialPageUrl(baseUrl: string, language: string, type: string, slug: 
 
 function looksLikeLanguageCode(value: unknown) {
   return /^[a-z]{2}(?:-[a-z0-9]+)?$/i.test(String(value || ''))
-}
-
-function compactText(text: string, maxLength: number) {
-  const normalized = String(text || '').replace(/\s+/g, ' ').trim()
-  return normalized.length > maxLength ? `${normalized.slice(0, maxLength - 1)}...` : normalized
-}
-
-function splitWikiSource(source: string) {
-  const text = String(source || '').trim() || '资料'
-  const index = text.indexOf('：')
-  if (index < 0) return { category: '资料', title: text }
-  return {
-    category: text.slice(0, index).trim() || '资料',
-    title: text.slice(index + 1).trim() || text,
-  }
-}
-
-function getMissionMeta(anchor: Pick<WarfarinWikiAnchor, 'anchor_id' | 'scope'>) {
-  if (anchor.scope !== 'missions') return undefined
-  const code = String(anchor.anchor_id || '').split('_')[0].trim()
-  if (!code) return undefined
-  const match = code.match(/m(\d+)$/i)
-  if (!match) return undefined
-  return { code, index: Number(match[1]) }
-}
-
-function excerptAroundKeyword(text: string, keyword: string, maxLength: number) {
-  const normalized = String(text || '').replace(/\s+/g, ' ').trim()
-  if (normalized.length <= maxLength) return normalized
-  const index = normalized.toLowerCase().indexOf(keyword.toLowerCase())
-  if (index < 0) return compactText(normalized, maxLength)
-  const half = Math.floor((maxLength - keyword.length) / 2)
-  const start = Math.max(0, index - half)
-  const end = Math.min(normalized.length, start + maxLength)
-  return `${start > 0 ? '...' : ''}${normalized.slice(start, end)}${end < normalized.length ? '...' : ''}`
 }
 
 async function readJson<T>(response: any): Promise<T> {

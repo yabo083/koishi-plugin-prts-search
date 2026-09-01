@@ -2,7 +2,7 @@
 // 版式原型见 design/weekly-prototype（1080 宽内页 / 群聊压到 ~400 宽仍要读得清，故正文不小于 26px）
 import fs from 'node:fs'
 import path from 'node:path'
-import { DailyCardData, DailyOperator } from './card-template'
+import { DailyCardData, DailyOperator } from './card-types'
 
 const WEEK_CN = ['日', '一', '二', '三', '四', '五', '六']
 
