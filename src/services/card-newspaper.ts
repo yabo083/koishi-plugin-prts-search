@@ -1,5 +1,6 @@
 // 「泰拉晨报」报纸风格：宋体、分栏、双细线、朱红点缀
 import { DailyCardData, DailyOperator } from './card-template'
+import { getNewspaperTheme, newspaperThemeVars } from './card-newspaper-theme'
 
 const NEWSPAPER_CSS = `
 :root {
@@ -125,8 +126,9 @@ body { font-family: var(--np-serif); color: var(--np-ink); }
 }
 .np-birth-item img {
   display: block; width: 100%; height: 170px;
-  object-fit: contain; object-position: top center;
+  object-fit: contain; object-position: center 15%;
   filter: grayscale(1) contrast(1.06);
+  margin: 0 auto;
 }
 .np-birth-name { font-size: 15px; font-weight: 900; letter-spacing: .1em; padding-top: 4px; }
 .np-birth-empty { text-align: center; font-size: 14px; color: var(--np-ink-soft); padding: 20px 0; }
@@ -142,7 +144,7 @@ body { font-family: var(--np-serif); color: var(--np-ink); }
 .np-extra-label::before { content: "▍"; color: var(--np-red); margin-right: 4px; }
 .np-extra-chips { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14.5px; }
 .np-extra-chip { display: inline-flex; align-items: baseline; gap: 6px; }
-.np-extra-chip .np-star { font-family: var(--print); font-size: 9px; letter-spacing: 1px; color: var(--np-star); }
+.np-extra-chip .np-rank { font-family: var(--print); font-size: 11px; letter-spacing: 2px; color: var(--np-star); vertical-align: super; }
 .np-extra-chip b { font-weight: 900; }
 .np-stage { font-size: 14px; text-align: justify; line-height: 1.7; }
 .np-stage b { font-weight: 900; }
@@ -175,11 +177,15 @@ function issueNumber(date: Date) {
   return Math.max(1, days + 1)
 }
 
+const RANK_CN = ['', '壹', '贰', '叁', '肆', '伍', '陆']
+
 function operatorLine(op: DailyOperator) {
-  return `<span class="np-extra-chip"><b>${escapeHtml(op.name)}</b><span class="np-star">${'★'.repeat(op.rarity)}</span></span>`
+  return `<span class="np-extra-chip"><b>${escapeHtml(op.name)}</b><span class="np-rank">${RANK_CN[op.rarity] || ''}</span></span>`
 }
 
 export function renderNewspaperHtml(data: DailyCardData, options: { fontsCssLinks: string }) {
+  const theme = getNewspaperTheme(new Date().getDay())
+  const themeCss = newspaperThemeVars(theme)
   const collectItems = [
     { title: '物资筹备分区', values: data.collectMaterial },
     { title: '芯片搜索分区', values: data.collectChips },
@@ -241,7 +247,7 @@ export function renderNewspaperHtml(data: DailyCardData, options: { fontsCssLink
 ${options.fontsCssLinks}
 <link rel="stylesheet" href="./fonts/serif/chinese-simplified-400.css">
 <link rel="stylesheet" href="./fonts/serif/chinese-simplified-700.css">
-<style>${NEWSPAPER_CSS}</style>
+<style>${NEWSPAPER_CSS}:root{${themeCss}}</style>
 </head>
 <body>
 <main class="np" id="letter">
