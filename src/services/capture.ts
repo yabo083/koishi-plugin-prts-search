@@ -416,10 +416,12 @@ export class PrtsCaptureService {
     try {
       const lxgwDir = path.dirname(require.resolve('lxgw-wenkai-lite-webfont/lxgwwenkailite-regular.css'))
       const zmxDir = path.dirname(require.resolve('@fontsource/zhi-mang-xing/index.css'))
+      const serifDir = path.dirname(require.resolve('@fontsource/noto-serif-sc/chinese-simplified-400.css'))
       const version = JSON.stringify({
         version: RENDER_FONTS_VERSION,
         lxgw: readPackageVersion(lxgwDir),
         zmx: readPackageVersion(zmxDir),
+        serif: readPackageVersion(serifDir),
       })
       // 字体按版本共享在系统临时目录，多实例/多测试只复制一次
       const hash = createHash('md5').update(version).digest('hex').slice(0, 8)
@@ -428,6 +430,7 @@ export class PrtsCaptureService {
         await fs.rm(fontsDir, { recursive: true, force: true })
         await copyInto(lxgwDir, path.join(fontsDir, 'lxgw'), ['lxgwwenkailite-regular.css', 'lxgwwenkailite-bold.css'])
         await copyInto(zmxDir, path.join(fontsDir, 'zmx'), ['index.css'])
+        await copyInto(serifDir, path.join(fontsDir, 'serif'), ['chinese-simplified-400.css', 'chinese-simplified-700.css'], /chinese-simplified-[47]00[^/]*.woff2$/)
         await fs.writeFile(path.join(fontsDir, 'version.json'), version, 'utf8')
         this.logger.debug?.('日报渲染字体资源已就绪。')
       }
@@ -478,13 +481,18 @@ export class PrtsCaptureService {
   }
 }
 
-async function copyInto(sourceDir: string, targetDir: string, files: string[]) {
+async function copyInto(sourceDir: string, targetDir: string, files: string[], fileFilter?: RegExp) {
   await fs.mkdir(targetDir, { recursive: true })
   for (const file of files) {
     await fs.copyFile(path.join(sourceDir, file), path.join(targetDir, file))
   }
-  if (await exists(path.join(sourceDir, 'files'))) {
-    await fs.cp(path.join(sourceDir, 'files'), path.join(targetDir, 'files'), { recursive: true })
+  const filesDir = path.join(sourceDir, 'files')
+  if (!await exists(filesDir)) return
+  const targetFilesDir = path.join(targetDir, 'files')
+  await fs.mkdir(targetFilesDir, { recursive: true })
+  for (const entry of await fs.readdir(filesDir)) {
+    if (fileFilter && !fileFilter.test(entry)) continue
+    await fs.copyFile(path.join(filesDir, entry), path.join(targetFilesDir, entry))
   }
 }
 

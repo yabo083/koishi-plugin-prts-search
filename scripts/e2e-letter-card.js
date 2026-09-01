@@ -1,4 +1,4 @@
-// 临时 e2e：真实 PRTS → 提取 → 立绘 → 渲染 → 截图（验证后删除）
+// e2e：真实 PRTS → 提取 → 渲染 → 截图。用法：node e2e-letter-card.js [styleId]
 const fs = require('node:fs')
 const os = require('node:os')
 const path = require('node:path')
@@ -8,6 +8,7 @@ const { PrtsCaptureService } = require('../lib/services/capture.js')
 const { DailyImageCache } = require('../lib/services/cache.js')
 
 const EXECUTABLE = 'C:/Users/yabo/.cache/puppeteer/chrome/win64-131.0.6778.204/chrome-win64/chrome.exe'
+const styleId = process.argv[2] || 'letter'
 
 async function main() {
   const browser = await puppeteer.launch({
@@ -36,18 +37,17 @@ async function main() {
     baseDir,
     puppeteer: {
       async page() {
-        const page = await browser.newPage()
-        return page
+        return browser.newPage()
       },
     },
   }
   const cache = new DailyImageCache(baseDir, 'data/miyako-intel/cache', 'Asia/Shanghai', 4)
-  const service = new PrtsCaptureService(ctx, cache, logger, { refreshCron: '5 4 * * *', fetcher })
+  const service = new PrtsCaptureService(ctx, cache, logger, { refreshCron: '5 4 * * *', fetcher, styleId })
 
   const result = await service.getDailyInfo(true)
-  const outFile = path.join(__dirname, '..', 'letter-e2e.png')
+  const outFile = path.join(__dirname, '..', `letter-e2e-${styleId}.png`)
   fs.writeFileSync(outFile, result.buffer)
-  console.log('dayKey:', result.dayKey, '| mime:', result.mimeType, '| size:', result.buffer.byteLength, 'B')
+  console.log('style:', styleId, '| dayKey:', result.dayKey, '| size:', result.buffer.byteLength, 'B')
   console.log('written:', outFile)
   await browser.close()
 }

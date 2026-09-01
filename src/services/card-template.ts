@@ -1,6 +1,8 @@
 // 「今日信笺」卡片渲染：数据 → 完整 HTML（file:// 加载后截图 #letter）
 // 版式与 design/letter-prototype 保持一致；字体从渲染目录的字体文件相对引用。
 
+import { renderNewspaperHtml } from './card-newspaper'
+
 // ==================== 日报风格注册表 ====================
 // 新增风格：实现 render(data, options) 并注册进 CARD_STYLES，配置下拉自动出现新选项。
 export interface CardStyle {
@@ -11,6 +13,7 @@ export interface CardStyle {
 
 export const CARD_STYLES: Record<string, CardStyle> = {
   letter: { id: 'letter', label: '今日信笺（手账风）', render: renderCardHtml },
+  newspaper: { id: 'newspaper', label: '泰拉晨报（报纸风）', render: renderNewspaperHtml },
 }
 
 export function renderCardByStyle(styleId: string | undefined, data: DailyCardData, options: { fontsCssLinks: string }): string {
