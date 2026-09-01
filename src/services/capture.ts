@@ -293,28 +293,24 @@ export class PrtsCaptureService {
     }
   }
 
-  private async resolveCachedImage(kind: CaptureKind, force: boolean, capture: () => Promise<{ buffer: Buffer; mimeType?: string; titles?: string[]; sourceUrls?: string[] }>) {
+  private async resolveCachedImage(kind: CaptureKind, force: boolean, capture: () => Promise<{ buffer: Buffer; mimeType?: string }>) {
     if (!force) {
       const cached = await this.cache.readToday(kind)
       if (cached) return cached
     }
     try {
       const fresh = await capture()
-      return await this.cache.write(kind, fresh.buffer, {
-        sourceUrls: fresh.sourceUrls || [],
-        titles: fresh.titles,
-        mimeType: fresh.mimeType,
-      })
+      return await this.cache.write(kind, fresh.buffer, { mimeType: fresh.mimeType })
     } catch (error) {
       this.logger.warn(`日报卡片生成失败：${formatError(error)}`)
-      const stale = await this.cache.readLatest(kind)
-      if (stale) return { ...stale, stale: true }
+      const fallback = await this.cache.readLatest(kind)
+      if (fallback) return fallback
       throw error
     }
   }
 
   /** 抓取 PRTS 首页 → 结构化数据 → 拉立绘 → 渲染「今日信笺」 → 截图 */
-  private async captureDailyCard(): Promise<{ buffer: Buffer; mimeType: string; titles: string[]; sourceUrls: string[] }> {
+  private async captureDailyCard(): Promise<{ buffer: Buffer; mimeType: string }> {
     const raw: RawDailyData = await this.withPage(async (page) => {
       await page.goto(this.homepageUrl, { waitUntil: 'networkidle2', timeout: NAVIGATION_TIMEOUT_MS })
       await page.waitForSelector('.mp-today', { timeout: NAVIGATION_TIMEOUT_MS })
@@ -360,7 +356,7 @@ export class PrtsCaptureService {
       return screenshot
     })
 
-    return { buffer, mimeType, titles: ['今日信笺'], sourceUrls: [this.homepageUrl] }
+    return { buffer, mimeType }
   }
 
   /* ---------- 干员头像（不落盘：一天只渲一次，缓存不值当；失败留空由渲染器出占位） ---------- */

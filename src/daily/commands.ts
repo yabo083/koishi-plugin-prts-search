@@ -30,9 +30,6 @@ export function registerDailyCommands(deps: DailyCommandsDeps) {
     try {
       const result = await capture.getDailyInfo(force)
       await session.send(toDailyImageMessage(result))
-      return result.stale
-        ? `今日信笺已发送（使用旧缓存 ${result.dayKey}）。`
-        : `今日信笺已发送（${result.dayKey}）。`
     } catch (error) {
       logger.warn(`发送今日信笺失败：${formatError(error)}`)
       return '今日信笺生成失败，且没有可用缓存。请确认 puppeteer 插件已启用并稍后重试。'

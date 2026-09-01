@@ -103,9 +103,6 @@ const defaultConfig = {
   deviceScaleFactor: 1,
   imageFormat: 'png',
   jpegQuality: 85,
-  staleFallback: true,
-  messagePrefix: '',
-  messageSuffix: '',
   summaryMaxItems: 8,
   summaryDatePreview: true,
   summaryDisplayItems: [
@@ -1354,7 +1351,8 @@ test('prts d sends the rendered letter card image', async () => {
   const reply = await daily({ session, options: {} })
 
   assert.equal(calls.filter((item) => item === 'captureDaily').length, 1)
-  assert.match(reply, /今日信笺已发送/)
+  // 成功路径只发图，不再附带说明文字
+  assert.equal(reply, undefined)
   assert.equal(session.sent.length, 1)
   assert.equal(String(session.sent[0]).includes('base64'), true)
 })
@@ -1366,10 +1364,14 @@ test('prts r ignores cache and forces recapture', async () => {
   const { ctx, commandHandlers, createSession } = createMockContext({ puppeteer })
   apply(ctx, { ...defaultConfig, dailyCardEnabled: true })
 
+  const session = createSession()
   const refresh = commandHandlers.get('prts.r')
-  const reply = await refresh({ session: createSession(), options: {} }, 'd')
+  const reply = await refresh({ session, options: {} }, 'd')
 
-  assert.match(reply, /今日信笺已发送/)
+  // 成功路径只发图，不再附带说明文字
+  assert.equal(reply, undefined)
+  assert.equal(session.sent.length, 1)
+  assert.equal(String(session.sent[0]).includes('base64'), true)
   assert.equal(calls.filter((item) => item === 'captureDaily').length, 1)
   assert.equal(calls.filter((item) => item?.kind === 'screenshot').length, 1)
 })

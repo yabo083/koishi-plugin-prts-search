@@ -28,7 +28,7 @@ const ITEM_ICONS: Array<[RegExp, string]> = [
   [/采购凭证/, 'item-voucher.png'],
   [/龙门币/, 'item-lmd.png'],
   [/技巧概要/, 'item-skill.png'],
-  [/碳素|建材/, 'item-carbon.png'],
+  [/碳|建材|家具/, 'item-carbon.png'],
 ]
 // 芯片搜索四关（PRTS 首页的职业组合 → 关卡缩略图）：
 // 固若金汤 = 医疗&重装 / 势不可挡 = 辅助&先锋 / 摧枯拉朽 = 术师&狙击 / 身先士卒 = 近卫&特种

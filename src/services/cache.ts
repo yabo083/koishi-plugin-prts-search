@@ -120,13 +120,10 @@ export class DailyImageCache {
     const manifest = await this.readManifest(kind, dayKey)
     return {
       buffer: await fs.readFile(filePath),
-      stale: false,
       dayKey,
       filePath,
       mimeType: manifest?.mimeType,
-      titles: manifest?.titles,
-      sourceUrls: manifest?.sourceUrls,
-      }
+    }
   }
 
   async write(kind: CaptureKind, buffer: Buffer, manifest: Omit<CacheManifest, 'kind' | 'dayKey' | 'generatedAt'>) {
@@ -145,13 +142,10 @@ export class DailyImageCache {
 
     return {
       buffer,
-      stale: false,
       dayKey,
       filePath,
       mimeType: manifest.mimeType,
-      titles: manifest.titles,
-      sourceUrls: manifest.sourceUrls,
-      }
+    }
   }
 
   async readLatest(kind: CaptureKind) {
@@ -163,13 +157,10 @@ export class DailyImageCache {
         const manifest = await this.readManifest(kind, dayKey)
         return {
           buffer: await fs.readFile(filePath),
-          stale: dayKey !== this.currentDayKey,
           dayKey,
           filePath,
           mimeType: manifest?.mimeType,
-          titles: manifest?.titles,
-          sourceUrls: manifest?.sourceUrls,
-          }
+        }
       }
     }
 

@@ -40,7 +40,7 @@ test('cache maintenance archives old day directories and keeps recent days', asy
     const dir = path.join(cacheRoot, dayKey)
     fs.mkdirSync(dir, { recursive: true })
     fs.writeFileSync(path.join(dir, 'daily.png'), Buffer.from(`image-${dayKey}`))
-    fs.writeFileSync(path.join(dir, 'daily.json'), JSON.stringify({ kind: 'daily', dayKey, generatedAt: '2026-05-14T00:00:00.000Z', sourceUrls: [] }))
+    fs.writeFileSync(path.join(dir, 'daily.json'), JSON.stringify({ kind: 'daily', dayKey, generatedAt: '2026-05-14T00:00:00.000Z' }))
   }
 
   const cache = new DailyImageCache(baseDir, 'data/miyako-intel/cache', 'Asia/Shanghai', 4, () => new Date('2026-05-14T08:00:00.000+08:00'))

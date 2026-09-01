@@ -59,19 +59,14 @@ export type CaptureKind = 'daily'
 
 export interface CachedImageResult {
   buffer: Buffer
-  stale: boolean
   dayKey: string
   filePath: string
   mimeType?: string
-  titles?: string[]
-  sourceUrls?: string[]
 }
 
 export interface CacheManifest {
   kind: CaptureKind
   dayKey: string
   generatedAt: string
-  sourceUrls: string[]
-  titles?: string[]
   mimeType?: string
 }
