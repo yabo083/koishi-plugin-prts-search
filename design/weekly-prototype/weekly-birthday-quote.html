@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>泰拉周刊 · 生日干员报到台词 原型</title>
+<!--
+  单人生日板块：贺语 → 「干员报到」台词（PRTS 语音记录子页提取）
+  参数：
+    q=1..5   台词长度档位（1=真实·苏苏洛 2=极短 3=中 4=长 5=超长测试样本）
+    week=0..6  七日强调色
+  自适应规则：优先保证 26px 可读下限；字号放不下时先扩板块高度（立绘跟着拉伸），
+  到上限 560px 后才继续降字号；quote 宽度跟随右侧栏。
+-->
+<link rel="stylesheet" href="../../../../node_modules/lxgw-wenkai-lite-webfont/lxgwwenkailite-regular.css">
+<link rel="stylesheet" href="../../../../node_modules/lxgw-wenkai-lite-webfont/lxgwwenkailite-bold.css">
+<link rel="stylesheet" href="../../../../node_modules/@fontsource/noto-serif-sc/chinese-simplified-400.css">
+<link rel="stylesheet" href="../../../../node_modules/@fontsource/noto-serif-sc/chinese-simplified-500.css">
+<link rel="stylesheet" href="../../../../node_modules/@fontsource/noto-serif-sc/chinese-simplified-700.css">
+<link rel="stylesheet" href="../../../../node_modules/@fontsource/noto-serif-sc/chinese-simplified-900.css">
+<style>
+/* ==================== 与正式插件 card-weekly.ts 同步的基线版式 ==================== */
+:root {
+  --ink: #f5f2ec;
+  --ink-2: rgba(245, 242, 236, 0.76);
+  --ink-3: rgba(245, 242, 236, 0.52);
+  --hair: rgba(245, 242, 236, 0.16);
+  --glass-line: rgba(255, 255, 255, 0.11);
+  --glass-top: rgba(255, 255, 255, 0.14);
+  --shadow: 0 14px 34px rgba(0, 0, 0, 0.42);
+  --serif: "Noto Serif SC", "Source Han Serif SC", "Songti SC", serif;
+  --sans: "PingFang SC", "MiSans", "Microsoft YaHei", sans-serif;
+  --hand: "LXGW WenKai Lite", "Kaiti SC", "KaiTi", "STKaiti", serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #191920;
+  font-family: var(--serif);
+  font-weight: 700;
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------------- 外框：装订书脊 ---------------- */
+.wk-frame {
+  position: relative;
+  width: 1160px;
+  padding: 16px 16px 16px 64px;
+  background: #0d0d12;
+  border: 3px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 26px 64px rgba(0, 0, 0, 0.62);
+}
+.wk-frame__spine {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 48px;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--accent) 88%, #fff 12%),
+    color-mix(in srgb, var(--accent) 62%, #000 38%));
+  color: #14131a;
+  writing-mode: vertical-rl;
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 0.34em;
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.28), 6px 0 22px rgba(0, 0, 0, 0.45);
+}
+.wk-frame__spine i { font-style: normal; opacity: 0.62; letter-spacing: 0.2em; }
+/* ---------------- 内页：深底 + 顶部立绘色雾 ---------------- */
+.wk {
+  position: relative;
+  width: 1080px;
+  overflow: hidden;
+  background: radial-gradient(120% 70% at 50% -10%, #1d1d27 0%, #101015 58%, #0c0c11 100%);
+}
+.wk-hero {
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  height: 620px;
+  overflow: hidden;
+  z-index: 0;
+}
+.wk-hero__img {
+  position: absolute;
+  inset: -80px -40px auto -40px;
+  height: 620px;
+  background-position: 50% 22%;
+  background-size: cover;
+  filter: blur(52px) saturate(165%) brightness(0.78);
+  opacity: 0.78;
+}
+.wk-hero__scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg,
+    rgba(10, 10, 15, 0.5) 0%, rgba(10, 10, 15, 0.42) 40%, rgba(16, 16, 21, 0.94) 86%, #101015 100%);
+}
+.wk-cap, .wk-body, .wk-foot { position: relative; z-index: 1; }
+
+/* ---------------- 报头：玻璃条 ---------------- */
+.wk-cap {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 30px;
+  padding: 20px 44px 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+  backdrop-filter: blur(16px) saturate(130%);
+  border-bottom: 1px solid var(--glass-line);
+  box-shadow: inset 0 1px 0 var(--glass-top);
+}
+.wk-cap__title {
+  font-size: 96px;
+  font-weight: 900;
+  line-height: 0.9;
+  letter-spacing: 0.05em;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.55);
+}
+.wk-cap__en {
+  margin-top: 12px;
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: rgba(245, 242, 236, 0.62);
+}
+.wk-cap__right { flex: none; text-align: right; }
+.wk-cap__date {
+  font-size: 78px;
+  font-weight: 900;
+  line-height: 0.86;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+.wk-cap__meta {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  font-size: 25px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+.wk-cap__clip { color: rgba(245, 242, 236, 0.66); font-weight: 700; }
+.wk-cap__week {
+  background: var(--accent);
+  color: #14131a;
+  padding: 4px 14px 6px;
+  border-radius: 6px;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+/* ---------------- 分区：磨砂玻璃卡 ---------------- */
+.wk-body { padding: 18px 26px 4px; }
+.wk-band {
+  padding: 16px 20px 18px;
+  margin-bottom: 11px;
+  border: 1px solid var(--glass-line);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.028));
+  backdrop-filter: blur(18px) saturate(125%);
+  box-shadow: var(--shadow), inset 0 1px 0 var(--glass-top);
+}
+.wk-band:last-of-type { margin-bottom: 0; }
+.wk-tab {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 14px;
+  background: rgba(245, 242, 236, 0.94);
+  color: #14131a;
+  font-size: 31px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  padding: 8px 20px 10px;
+  margin-bottom: 16px;
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+.wk-tab i {
+  font-style: normal;
+  font-size: 26px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  background: var(--accent);
+  color: #14131a;
+  padding: 0 10px 2px;
+  border-radius: 5px;
+}
+
+/* ---------------- 生辰干员（多人基线，作对照） ---------------- */
+.wk-portraits {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 16px 18px;
+}
+.wk-figure { width: 230px; }
+.wk-figure__frame {
+  position: relative;
+  height: 250px;
+  overflow: hidden;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.5), inset 0 0 0 1px var(--glass-line);
+}
+.wk-figure__frame::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 6px;
+  border-radius: 0 0 16px 16px;
+  background: var(--accent);
+}
+.wk-figure__frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 6%;
+}
+
+/* ---------------- 单人封面 + 报到台词 ---------------- */
+/* 头像以「姓名 + 台词」栏的实际高度垂直居中：栏高由脚本写入 --solo-h，立绘框与栏等高即居中 */
+.wk-portraits--solo { justify-content: flex-start; gap: 40px; align-items: center; }
+.wk-portraits--solo .wk-figure { width: 380px; }
+.wk-portraits--solo .wk-figure__frame { height: var(--solo-h, 396px); }
+.wk-solo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.wk-solo__name {
+  font-size: 96px;
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: 0.04em;
+}
+.wk-solo__bar {
+  width: 140px;
+  height: 10px;
+  border-radius: 5px;
+  background: var(--accent);
+  margin: 24px 0 22px;
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+/* 台词正文：楷体手账风（渲染管线已加载 lxgw-wenkai-lite），只留台词本身 */
+.wk-solo__quote {
+  font-family: var(--hand);
+  font-weight: 700;
+  line-height: 1.72;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.55);
+  text-align: justify;
+}
+
+/* ---------------- 占位分区（撑出整卡上下文） ---------------- */
+.wk-context {
+  padding: 14px 2px 2px;
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  color: var(--ink-3);
+}
+.wk-context em { font-style: normal; color: var(--ink-2); }
+
+/* ---------------- 落款：玻璃条 ---------------- */
+.wk-foot {
+  margin: 13px 26px 17px;
+  padding: 12px 22px 14px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  border: 1px solid var(--glass-line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.045);
+  backdrop-filter: blur(14px);
+  color: var(--ink-3);
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  box-shadow: inset 0 1px 0 var(--glass-top);
+}
+.wk-foot b { color: var(--ink); font-weight: 900; }
+
+/* ---------------- 原型工具条（截图目标 #letter 之外，不入正片） ---------------- */
+.proto-bar {
+  margin: 26px auto 0;
+  width: 1160px;
+  font-family: var(--sans);
+  font-size: 14px;
+  color: #9a9aa8;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  align-items: baseline;
+}
+.proto-bar a { color: #cfcfda; text-decoration: none; padding: 3px 10px; border: 1px solid #3a3a46; border-radius: 6px; }
+.proto-bar a:hover { border-color: #6a6a7a; }
+.proto-bar a.on { background: #cfcfda; color: #14131a; }
+</style>
+</head>
+<body>
+<div class="wk-frame" id="letter" style="--accent:#ff5f70">
+  <span class="wk-frame__spine">泰拉周刊<i>TERRA WEEKLY</i></span>
+  <main class="wk">
+    <div class="wk-hero">
+      <span class="wk-hero__img" id="hero-img"></span>
+      <span class="wk-hero__scrim"></span>
+    </div>
+    <header class="wk-cap">
+      <div>
+        <h1 class="wk-cap__title">泰拉周刊</h1>
+        <p class="wk-cap__en">Terra Weekly · No.2741</p>
+      </div>
+      <div class="wk-cap__right">
+        <p class="wk-cap__date">09.04</p>
+        <p class="wk-cap__meta">
+          <span class="wk-cap__clip">农历七月十三</span>
+          <span class="wk-cap__week">星期五</span>
+        </p>
+      </div>
+    </header>
+    <div class="wk-body">
+      <!-- ============ 被测板块：单人生日 + 报到台词 ============ -->
+      <section class="wk-band">
+        <h2 class="wk-tab">今日生日<i>01</i></h2>
+        <div class="wk-portraits wk-portraits--solo" id="solo">
+          <figure class="wk-figure">
+            <div class="wk-figure__frame"><img id="solo-art" alt=""></div>
+          </figure>
+          <div class="wk-solo">
+            <p class="wk-solo__name" id="solo-name"></p>
+            <div class="wk-solo__bar"></div>
+            <p class="wk-solo__quote" id="solo-quote"></p>
+          </div>
+        </div>
+      </section>
+      <!-- ============ 上下文占位：模拟整卡其余分区 ============ -->
+      <section class="wk-band">
+        <h2 class="wk-tab">情报速递</h2>
+        <p class="wk-context">剿灭作战 &amp; 周常任务 <em>19小时后</em> 刷新 ｜ 限时寻访『联合行动23』<em>1天7小时后</em>结束</p>
+      </section>
+    </div>
+    <footer class="wk-foot">
+      <span>截稿 <b>04:05</b></span>
+      <span>情报源 <b>PRTS.WIKI</b></span>
+      <span>MIYAKO-INTEL</span>
+    </footer>
+  </main>
+</div>
+
+<div class="proto-bar">
+  <span>台词长度档位：</span>
+  <a href="?q=1" data-q="1">1 · 苏苏洛（真实）</a>
+  <a href="?q=2" data-q="2">2 · 极短</a>
+  <a href="?q=3" data-q="3">3 · 中</a>
+  <a href="?q=4" data-q="4">4 · 长</a>
+  <a href="?q=5" data-q="5">5 · 超长</a>
+  <span style="width:1em"></span>
+  <span>强调色：</span>
+  <a href="#" data-week="0">日</a>
+  <a href="#" data-week="1">一</a>
+  <a href="#" data-week="2">二</a>
+  <a href="#" data-week="3">三</a>
+  <a href="#" data-week="4">四</a>
+  <a href="#" data-week="5">五</a>
+  <a href="#" data-week="6">六</a>
+  <span id="fit-info" style="opacity:.7"></span>
+</div>
+
+<script>
+/* ==================== 样本数据 ==================== */
+const WEEK_ACCENTS = ['#ff5f70', '#6698e0', '#ff8a52', '#93c96d', '#c294e0', '#efb63f', '#45cbbc']
+
+// q=1 是今日真实数据（苏苏洛，PRTS「干员报到」中文语音）；其余为长度测试样本
+const SAMPLES = {
+  1: {
+    name: '苏苏洛', art: './assets/sussurro_2.png',
+    quote: '医疗干员苏苏洛向您报到。即使博士您身兼多种要职，是干员们的导师，但医生的话，您也是要听的哦。',
+  },
+  2: {
+    name: '克洛丝', art: './assets/sussurro_2.png',
+    quote: '行动干员克洛丝，前来报到！',
+  },
+  3: {
+    name: '德克萨斯', art: './assets/sussurro_2.png',
+    quote: '企鹅物流，德克萨斯。预定的工作已经确认好了，有需要就联系我。除了工作上的事，还是希望不要有过多的交集。',
+  },
+  4: {
+    name: '煌', art: './assets/sussurro_2.png',
+    quote: '干员煌，正式加入罗德岛。让我看看任务安排……嗯，和以前大差不差。那么，指挥官，就从今天开始好好相处吧，我会让你看到什么才叫真正的战场老手。',
+  },
+  5: {
+    name: '超长测试样本干员名', art: './assets/sussurro_2.png',
+    quote: '这是一条用于测试排版极限的超长报到台词。干员报到语音在 PRTS 的记录里偶尔会有相当长的句子，标点、停顿、语气词一应俱全，甚至可能出现引号「像这样」或者书名号《那样》的情况。为了让版式在任何长度下都保持美观，字号会先尝试放宽，再逐级收缩，最后保证整句完整呈现在卡片之内，不会出现截断或者溢出。 如果连可读下限都放不下，板块还会适当增高，立绘也会跟着拉伸，整体仍然保持协调。',
+  },
+}
+
+/* ==================== 自适应排版 ==================== */
+const FONT_MAX = 40   // 台词起始字号
+const FONT_MIN = 22   // 底线（低于会按板块增高优先）
+const SOLO_H_MIN = 396  // 与原版单人封面等高起步
+const SOLO_H_MAX = 560  // 板块最高：超过就只降字号
+
+const params = new URLSearchParams(location.search)
+const sample = SAMPLES[params.get('q') || '1'] || SAMPLES[1]
+const week = Math.min(6, Math.max(0, Number(params.get('week') || 5)))
+
+document.getElementById('letter').style.setProperty('--accent', WEEK_ACCENTS[week])
+document.getElementById('solo-name').textContent = sample.name
+document.getElementById('solo-quote').textContent = sample.quote
+document.getElementById('solo-art').src = sample.art
+document.getElementById('hero-img').style.backgroundImage = "url('" + sample.art + "')"
+
+// 工具条高亮 + week 参数带给 q 链接
+document.querySelectorAll('.proto-bar a[data-q]').forEach((a) => {
+  if (a.dataset.q === (params.get('q') || '1')) a.classList.add('on')
+  a.href = '?q=' + a.dataset.q + (params.get('week') ? '&week=' + params.get('week') : '')
+})
+document.querySelectorAll('.proto-bar a[data-week]').forEach((a) => {
+  if (Number(a.dataset.week) === week) a.classList.add('on')
+  a.href = '?q=' + (params.get('q') || '1') + '&week=' + a.dataset.week
+})
+
+function fitQuote() {
+  const solo = document.getElementById('solo')
+  const col = solo.querySelector('.wk-solo')
+  const name = document.getElementById('solo-name')
+  const bar = solo.querySelector('.wk-solo__bar')
+  const quote = document.getElementById('solo-quote')
+  const soloWidth = solo.clientWidth - 380 - 40  // 减去立绘列宽与间距
+
+  // 逐档尝试：优先用大字号；放不下先扩高（保住可读下限），到顶才继续降字号。
+  // 台词可用高度按「姓名 + 台词」栏的实际内容高度计算，栏高与立绘框同高，头像随之垂直居中。
+  for (let h = SOLO_H_MIN; h <= SOLO_H_MAX; h += 24) {
+    solo.style.setProperty('--solo-h', h + 'px')
+    col.style.height = h + 'px'
+    const fixedH = name.offsetHeight + bar.offsetHeight
+    const availH = col.clientHeight - fixedH
+    for (let size = FONT_MAX; size >= FONT_MIN; size -= 2) {
+      quote.style.fontSize = size + 'px'
+      const fits = quote.scrollHeight <= availH && quote.scrollWidth <= soloWidth
+      if (fits) {
+        document.getElementById('fit-info').textContent =
+          `fit: ${size}px @ 板块高 ${h}px · 台词 ${sample.quote.length} 字`
+        return
+      }
+    }
+  }
+  // 极端兜底：到底也放不下就停在最小字号（当前样本未触发）
+  document.getElementById('fit-info').textContent = 'overflow（未触发即为通过）'
+}
+
+function runFit() {
+  requestAnimationFrame(() => requestAnimationFrame(fitQuote))
+}
+if (document.fonts && document.fonts.ready) {
+  document.fonts.ready.then(runFit)
+  setTimeout(runFit, 600)  // 字体晚到时再校一次
+} else {
+  runFit()
+}
+document.getElementById('solo-art').addEventListener('load', runFit)
+</script>
+</body>
+</html>

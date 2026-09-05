@@ -29,6 +29,8 @@ export interface DailyBirthdayOperator {
   art: string
   tilt: number
   tape: string
+  /** 「干员报到」台词（PRTS 语音记录子页）；仅当日唯一生日干员时提取，失败留空 */
+  quote?: string
 }
 
 export interface DailyStageGroup {

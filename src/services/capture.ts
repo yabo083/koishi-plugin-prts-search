@@ -176,6 +176,17 @@ export function compressStageCodes(codes: string[]) {
   return parts.join(' / ')
 }
 
+/**
+ * 从「干员名/语音记录」子页的 wikitext 中提取「干员报到」的中文台词。
+ * 结构固定：`|标题N=干员报到` 下一行是 `|台词N={{VoiceData/word|中文|台词正文}}`。
+ */
+export function extractOperatorQuote(wikitext: string): string {
+  const match = String(wikitext || '').match(
+    /\|标题\d+=干员报到\s*\n\s*\|台词\d+={{VoiceData\/word\|中文\|((?:[^{}]|}(?=[^}]))*?)\}\}/,
+  )
+  return match ? match[1].replace(/\s+/g, ' ').trim() : ''
+}
+
 export function mapRawToDailyCard(raw: RawDailyData, options: { now: Date }): DailyCardData {
   const parts = getZonedParts(options.now, TIMEZONE)
   const tilts = [-5, 3, -2, 4, -6, 5, -3, 6]
@@ -326,6 +337,15 @@ export class PrtsCaptureService {
     for (const birthday of data.birthdays) {
       birthday.art = await this.fetchBirthdayArt(birthday.name, birthday.avatar)
     }
+    // 当日唯一生日干员：补「干员报到」台词（泰拉周刊单人封面用）；失败留空由渲染器回退原贺语
+    if (data.birthdays.length === 1) {
+      const solo = data.birthdays[0]
+      try {
+        solo.quote = await this.fetchOperatorQuote(solo.name)
+      } catch (error) {
+        this.logger.warn(`干员「${solo.name}」报到台词获取失败：${formatError(error)}`)
+      }
+    }
     if (resolveCardStyle(this.options.styleId).needsOperatorAvatars) {
       await this.inlineOperatorAvatars([...data.recentOperators, ...data.poolOperators])
     }
@@ -416,6 +436,18 @@ export class PrtsCaptureService {
       }
     }
     return ''
+  }
+
+  /* ---------- 生日干员「干员报到」台词（不落盘：一天最多一次请求） ---------- */
+
+  private async fetchOperatorQuote(name: string): Promise<string> {
+    const fetcher = this.options.fetcher || defaultFetcher
+    const api = `https://prts.wiki/api.php?action=parse&page=${encodeURIComponent(`${name}/语音记录`)}&prop=wikitext&format=json&formatversion=2`
+    const payload = await fetcher(api, {
+      responseType: 'json',
+      headers: { ...BROWSER_HEADERS, Accept: 'application/json' },
+    })
+    return extractOperatorQuote(String(payload?.parse?.wikitext || ''))
   }
 
   private async resolveHalfBodyUrl(name: string, fetcher: DailyFetcher): Promise<string> {

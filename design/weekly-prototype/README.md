@@ -9,6 +9,7 @@
 | `weekly-gallery.html` | 一周七色 + 无生日 / 单人封面 / 衬影备选，共十格 |
 | `weekly-frames.html` | 七版外框对比，左边缩到 400px（群聊真实观感），右边 1/2 尺寸细节 |
 | `weekly-dark.html` | 夜间模式 × V2/V3/V7 外框，末格是白天版对照 |
+| `weekly-birthday-quote.html` | 单人生日板块：贺语换成「干员报到」台词的定稿页。参数：`q=1..5`（台词长度档位，1=真实样本）、`week=0..6`。字号 40px 起自适应，放不下先扩板块（396→560px，立绘跟随拉伸）再降字号至 22px 下限；立绘与「姓名+台词」栏实测等高居中 |
 | `shot.js` | `node shot.js weekly.html "case=multi&week=2&theme=dark"` 截 `#letter` |
 | `sim-compress.js` | `node sim-compress.js qa-xxx.png 410` 模拟群聊二压（缩到 410px 存 JPEG q45），验字重 |
 

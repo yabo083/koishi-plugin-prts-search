@@ -208,3 +208,56 @@ test('weekly style is registered and asks for operator avatars', () => {
   assert.equal(resolveCardStyle('weekly').needsOperatorAvatars, true)
   assert.equal(resolveCardStyle('letter').needsOperatorAvatars, undefined)
 })
+
+test('extractOperatorQuote pulls the Chinese report line from the voice-record wikitext', () => {
+  const { extractOperatorQuote } = require('../lib/services/capture.js')
+  const wikitext = [
+    '<noinclude>==语音记录==</noinclude>{{#widget:VoiceTable}}{{VoiceTable|表格标题=语音记录',
+    '|语音key=char_298_susuro',
+    '',
+    '|标题11=信赖触摸',
+    '|台词11={{VoiceData/word|中文|摸摸头。}}',
+    '',
+    '|标题12=干员报到',
+    '|台词12={{VoiceData/word|中文|医疗干员苏苏洛向您报到。即使博士您身兼多种要职，是干员们的导师，但医生的话，您也是要听的哦。}}{{VoiceData/word|日文|医療オペレーターのスーズーロー、着任しました。}}',
+    '|语音12=CN_012.wav',
+    '|触发类型12=RECEPTION',
+  ].join('\n')
+  assert.equal(
+    extractOperatorQuote(wikitext),
+    '医疗干员苏苏洛向您报到。即使博士您身兼多种要职，是干员们的导师，但医生的话，您也是要听的哦。',
+  )
+  // 没有「干员报到」条目（或页面抓空）时返回空串，由渲染器回退原贺语
+  assert.equal(extractOperatorQuote(''), '')
+  assert.equal(extractOperatorQuote('|标题1=任命助理\n|台词1={{VoiceData/word|中文|博士早。}}'), '')
+})
+
+test('weekly solo birthday renders the report quote and keeps note fallback', () => {
+  const { renderWeeklyHtml } = require('../lib/services/card-weekly.js')
+  const card = mapRawToDailyCard(RAW_FIXTURE, { now: NOW })
+  card.birthdays[0].art = 'data:image/png;base64,AAAA'
+
+  card.birthdays = [card.birthdays[0]]
+  card.birthdays[0].quote = '医疗干员苏苏洛向您报到。'
+  const withQuote = renderWeeklyHtml(card, { fontsCssLinks: '' })
+  assert.match(withQuote, /id="wk-solo"/)
+  assert.match(withQuote, /wk-solo__quote">医疗干员苏苏洛向您报到。</)
+  assert.match(withQuote, /WEEKLY|wk-solo/)
+  assert.match(withQuote, /--solo-h/)  // 自适应脚本在页内
+  assert.doesNotMatch(withQuote, /wk-solo__note">/)
+
+  // 台词缺失（抓取失败）时回退原贺语
+  delete card.birthdays[0].quote
+  const fallback = renderWeeklyHtml(card, { fontsCssLinks: '' })
+  assert.match(fallback, /wk-solo__note">今天只有一位干员生日。/)
+  assert.doesNotMatch(fallback, /wk-solo__quote">/)
+
+  // 多人生日维持既有立绘墙，不出现台词
+  card.birthdays = [
+    { ...card.birthdays[0], quote: '医疗干员苏苏洛向您报到。' },
+    { ...card.birthdays[0], name: '特克诺', quote: '行动预备干员特克诺，前来报到。' },
+  ]
+  const multi = renderWeeklyHtml(card, { fontsCssLinks: '' })
+  assert.match(multi, /wk-portraits"(?! wk-portraits--solo)/)
+  assert.doesNotMatch(multi, /wk-solo__quote">/)
+})

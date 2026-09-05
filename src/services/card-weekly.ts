@@ -340,10 +340,11 @@ body {
 .wk-figure__name--tight { font-size: 30px; letter-spacing: 0; }
 .wk-figure__name--tighter { font-size: 25px; letter-spacing: -0.01em; }
 
-/* 单人：立绘做封面，右侧大字名号 */
-.wk-portraits--solo { justify-content: flex-start; gap: 40px; align-items: stretch; }
+/* ---------------- 单人封面 + 报到台词 ---------------- */
+/* 头像以「姓名 + 台词」栏的实际高度垂直居中：栏高由下方脚本写入 --solo-h，立绘框与栏等高即居中 */
+.wk-portraits--solo { justify-content: flex-start; gap: 40px; align-items: center; }
 .wk-portraits--solo .wk-figure { width: 380px; }
-.wk-portraits--solo .wk-figure__frame { height: 396px; }
+.wk-portraits--solo .wk-figure__frame { height: var(--solo-h, 396px); }
 .wk-solo {
   flex: 1;
   min-width: 0;
@@ -370,6 +371,17 @@ body {
   font-weight: 700;
   line-height: 1.7;
   color: var(--ink-2);
+}
+/* 报到台词：楷体手账风（渲染管线已加载 lxgw-wenkai-lite），只留台词本身；
+   字号由下方脚本自适应（40px 起，放不下先扩板块再降字号，22px 下限） */
+.wk-solo__quote {
+  font-family: "LXGW WenKai Lite", "Kaiti SC", "KaiTi", "STKaiti", serif;
+  font-weight: 700;
+  line-height: 1.72;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.55);
+  text-align: justify;
 }
 /* ---------------- 情报速递：倒计时特大数字 ---------------- */
 .wk-news__item {
@@ -602,16 +614,19 @@ function coverBand(data: DailyCardData) {
   const art = (item: typeof list[number]) => escapeHtml(item.art || item.avatar)
   if (list.length === 1) {
     const op = list[0]
+    const quote = String(op.quote || '').trim()
     return `<section class="wk-band">
       ${tab('今日生日', '01')}
-      <div class="wk-portraits wk-portraits--solo">
+      <div class="wk-portraits wk-portraits--solo" id="wk-solo">
         <figure class="wk-figure">
           <div class="wk-figure__frame"><img src="${art(op)}" alt="${escapeHtml(op.name)}"></div>
         </figure>
         <div class="wk-solo">
           <p class="wk-solo__name">${escapeHtml(op.name)}</p>
           <div class="wk-solo__bar"></div>
-          <p class="wk-solo__note">今天只有一位干员生日。<br>蛋糕已经在后勤部备好了。</p>
+          ${quote
+            ? `<p class="wk-solo__quote">${escapeHtml(quote)}</p>`
+            : `<p class="wk-solo__note">今天只有一位干员生日。<br>蛋糕已经在后勤部备好了。</p>`}
         </div>
       </div>
     </section>`
@@ -721,6 +736,36 @@ function rosterBand(data: DailyCardData) {
 
 /* ==================== 整页 ==================== */
 
+const WEEKLY_FIT_SCRIPT = `
+/* 单人封面台词自适应：字号 40px 起试，放不下先扩板块高度（立绘跟随拉伸、保住可读下限），
+   到 560px 上限才继续降字号，22px 下限。头像与「姓名+台词」栏实测等高，天然垂直居中。 */
+(function () {
+  var solo = document.getElementById('wk-solo')
+  if (!solo) return
+  var col = solo.querySelector('.wk-solo')
+  var name = solo.querySelector('.wk-solo__name')
+  var bar = solo.querySelector('.wk-solo__bar')
+  var quote = solo.querySelector('.wk-solo__quote')
+  if (!col || !quote) return
+  var soloWidth = solo.clientWidth - 380 - 40
+  function fit() {
+    for (var h = 396; h <= 560; h += 24) {
+      solo.style.setProperty('--solo-h', h + 'px')
+      col.style.height = h + 'px'
+      var availH = col.clientHeight - name.offsetHeight - bar.offsetHeight
+      for (var size = 40; size >= 22; size -= 2) {
+        quote.style.fontSize = size + 'px'
+        if (quote.scrollHeight <= availH && quote.scrollWidth <= soloWidth) return
+      }
+    }
+  }
+  fit()
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit)
+  window.addEventListener('load', fit)
+  setTimeout(fit, 600)
+})()
+`
+
 export function renderWeeklyHtml(data: DailyCardData, options: { fontsCssLinks: string }) {
   const zoned = toZoned(new Date())
   const matched = String(data.dateText || '').match(/(\d+)月(\d+)日/)
@@ -776,6 +821,7 @@ ${rosterBand(data)}
     </footer>
   </main>
 </div>
+<script>${WEEKLY_FIT_SCRIPT}</script>
 </body>
 </html>`
 }
