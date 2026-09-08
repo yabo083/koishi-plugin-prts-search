@@ -157,8 +157,8 @@ body {
   left: 0; top: 0; bottom: 0;
   width: 48px;
   background: linear-gradient(180deg,
-    color-mix(in srgb, var(--accent) 88%, #fff 12%),
-    color-mix(in srgb, var(--accent) 62%, #000 38%));
+    color-mix(in srgb, var(--birthday-accent) 88%, #fff 12%),
+    color-mix(in srgb, var(--birthday-accent) 62%, #000 38%));
   color: #14131a;
   writing-mode: vertical-rl;
   font-size: 20px;
@@ -247,11 +247,11 @@ body {
 }
 .wk-cap__clip { color: rgba(245, 242, 236, 0.66); font-weight: 700; }
 .wk-cap__week {
-  background: var(--accent);
+  background: var(--birthday-accent);
   color: #14131a;
   padding: 4px 14px 6px;
   border-radius: 6px;
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--birthday-accent) 45%, transparent);
 }
 
 /* ---------------- 分区：磨砂玻璃卡 ---------------- */
@@ -772,11 +772,13 @@ export function renderWeeklyHtml(data: DailyCardData, options: { fontsCssLinks: 
   const matched = String(data.dateText || '').match(/(\d+)月(\d+)日/)
   const numericDate = matched ? `${pad2(matched[1])}.${pad2(matched[2])}` : escapeHtml(data.dateText)
   const weekIndex = Math.max(0, WEEK_CN.indexOf(String(data.weekText || '').replace('星期', '')))
-  // 当天有生日干员且查得到主题色时，整卡强调色（书脊/星期徽章/生日区）随人走；否则维持星期轮换色
-  const birthdayColor = (data.birthdays || [])
-    .map((op) => operatorThemeColor(op.name))
-    .find(Boolean)
-  const accent = birthdayColor || ACCENTS[weekIndex]
+  // 生日色只覆盖书脊和星期徽章；其余强调色保持星期轮换。
+  let birthdayColor = ''
+  for (const operator of data.birthdays || []) {
+    birthdayColor = operatorThemeColor(operator.art)
+    if (birthdayColor) break
+  }
+  const accent = ACCENTS[weekIndex]
   // 顶部色雾用第一张立绘糊出来；没有生日干员就只留渐变底
   const heroArt = (data.birthdays || [])[0]
   const heroSource = heroArt ? heroArt.art || heroArt.avatar : ''
@@ -796,7 +798,7 @@ ${options.fontsCssLinks}
 <style>${WEEKLY_CSS}</style>
 </head>
 <body>
-<div class="wk-frame" id="letter" style="--accent:${accent}">
+<div class="wk-frame" id="letter" style="--accent:${accent};--birthday-accent:${birthdayColor || accent}">
   <span class="wk-frame__spine">泰拉周刊<i>TERRA WEEKLY</i></span>
   <main class="wk">
     ${hero}
