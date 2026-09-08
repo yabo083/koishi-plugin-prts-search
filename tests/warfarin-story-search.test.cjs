@@ -499,7 +499,7 @@ test('story bundle builder publishes bundled seed when remote bundle is stale', 
   assert.match(result.stdout, /Warfarin story bundle bundled seed publish:/)
   const manifest = JSON.parse(fs.readFileSync(path.join(outDir, 'warfarin-story-cn.manifest.json'), 'utf8'))
   const anchors = JSON.parse(zlib.gunzipSync(fs.readFileSync(path.join(outDir, 'warfarin-story-cn.json.gz'))).toString('utf8'))
-  assert.equal(manifest.parserVersion, 3)
+  assert.equal(manifest.parserVersion, 4)
   assert.ok(manifest.count >= 2200)
   assert.equal(manifest.sourceReport.refreshed, anchors.length)
   assert.equal(anchors.some(anchor => anchor.source === 'Baker对话：独行之路'), true)
@@ -565,7 +565,7 @@ test('story bundle preflight skips dependency installation when source is unchan
     globalThis.fetch = async (url) => {
       const value = String(url)
       if (value === 'https://warfarin.wiki/cn') return response('<html><body>最后更新：2026-05-14</body></html>')
-      if (value.endsWith('.manifest.json')) return response({ language: 'cn', parserVersion: 3, sourceUpdatedAt: '2026-05-14', count: 4047 })
+      if (value.endsWith('.manifest.json')) return response({ language: 'cn', parserVersion: 4, sourceUpdatedAt: '2026-05-14', count: 4047 })
       throw new Error('unexpected fetch: ' + value)
     }
   `)
@@ -670,7 +670,7 @@ test('bundled seed regeneration stays aligned with runtime parser metadata', () 
   assert.equal(result.status, 0, result.stderr || result.stdout)
   assert.deepEqual(JSON.parse(result.stdout).count, 2)
   const generated = fs.readFileSync(outFile, 'utf8')
-  assert.match(generated, /export const bundledStorySeedVersion = 3/)
+  assert.match(generated, /export const bundledStorySeedVersion = 4/)
   assert.match(generated, /export const bundledStorySeedCount = 2/)
 })
 
@@ -899,3 +899,50 @@ function bufferResponse(buffer) {
     async arrayBuffer() { return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) },
   }
 }
+
+test('Warfarin mission parser reads the new transcript[] segments with line/choice items', () => {
+  const { createStoryAnchorFromMission } = loadStoryParsers()
+
+  const anchor = createStoryAnchorFromMission('c16m3', {
+    mission: { id: 'c16m3', name: '前尘之魇', desc: '探寻记忆。' },
+    transcript: [
+      {
+        file: 'dlg_c16m3_2', kind: 'mixed',
+        items: [
+          { type: 'line', speaker: '罗丹的幻影', text: '你们的“救世主”，杀不死我！' },
+          { type: 'choice', options: [{ id: 'o1', text: '刚才我看到的是……' }, { id: 'o2', text: '' }] },
+          { type: 'line', speaker: '', text: '旁白没有说话人。' },
+          { type: 'line', speaker: '管理员', text: '' },
+        ],
+      },
+      { file: 'dlg_c16m3_3', kind: 'cutscene', items: [{ type: 'line', speaker: '莱万汀', text: '又见面了，管理员。' }] },
+    ],
+    radios: [
+      { radioId: 'radio_c16m3_2', messages: [{ index: 1, speaker: '管理员', text: '希望能找到她……' }] },
+    ],
+  })
+
+  assert.equal(anchor.source, '任务剧情：前尘之魇')
+  assert.equal(anchor.content.split('\n')[0], '前尘之魇')
+  assert.ok(anchor.content.includes('罗丹的幻影：你们的“救世主”，杀不死我！'))
+  assert.ok(anchor.content.includes('选项：刚才我看到的是……'))
+  assert.ok(anchor.content.includes('旁白：旁白没有说话人。'))
+  assert.ok(anchor.content.includes('莱万汀：又见面了，管理员。'))
+  assert.ok(anchor.content.includes('通讯中 / 管理员：希望能找到她……'))
+  assert.deepEqual(anchor.full_text[0], { speaker: '罗丹的幻影', text: '你们的“救世主”，杀不死我！' })
+  // 空 speaker/text 与空选项不产出空行
+  assert.doesNotMatch(anchor.content, /：\s*\n/)
+})
+
+test('Warfarin mission parser keeps legacy dialog[] and radioText[] fields working', () => {
+  const { createStoryAnchorFromMission } = loadStoryParsers()
+
+  const anchor = createStoryAnchorFromMission('a1m9', {
+    mission: { name: '武陵特厨' },
+    dialog: [{ actorName: '主持人', dialogText: '你好，管理员。' }],
+    radios: [{ radioId: 'radio_a1m9_1', messages: [{ index: 1, actorName: '管理员', radioText: '旧字段通讯。' }] }],
+  })
+
+  assert.ok(anchor.content.includes('主持人：你好，管理员。'))
+  assert.ok(anchor.content.includes('通讯中 / 管理员：旧字段通讯。'))
+})

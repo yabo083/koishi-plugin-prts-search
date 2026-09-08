@@ -10,6 +10,25 @@ export function createStoryAnchorFromMission(slug: string, data: any): StoryAnch
     const text = stripTags(value || '')
     if (text) texts.push(text)
   }
+  // 新版 detail 用 transcript[] 分段（line/choice 两类 item）；旧 dialog[] 仍保留兼容
+  for (const segment of Array.isArray(data?.transcript) ? data.transcript : []) {
+    for (const item of Array.isArray(segment?.items) ? segment.items : []) {
+      if (item?.type === 'choice') {
+        for (const option of Array.isArray(item?.options) ? item.options : []) {
+          const text = stripTags(option?.text || '')
+          if (!text) continue
+          texts.push(`选项：${text}`)
+          fullText.push({ speaker: '选项', text })
+        }
+        continue
+      }
+      const text = stripTags(item?.text || '')
+      if (!text) continue
+      const speaker = stripTags(item?.speaker || '') || '旁白'
+      texts.push(`${speaker}：${text}`)
+      fullText.push({ speaker, text })
+    }
+  }
   for (const entry of Array.isArray(data?.dialog) ? data.dialog : []) {
     const text = stripTags(entry?.dialogText || entry?.optionText || '')
     if (!text) continue
@@ -19,9 +38,9 @@ export function createStoryAnchorFromMission(slug: string, data: any): StoryAnch
   }
   for (const radio of sortRadios(data?.radios)) {
     for (const message of sortRadioMessages(radio?.messages)) {
-      const text = stripTags(message?.radioText || '')
+      const text = stripTags(message?.text || message?.radioText || '')
       if (!text) continue
-      const speaker = stripTags(message?.actorName || '') || '通讯'
+      const speaker = stripTags(message?.speaker || message?.actorName || '') || '通讯'
       texts.push(`通讯中 / ${speaker}：${text}`)
       fullText.push({ scene: '通讯中', speaker, text })
     }
