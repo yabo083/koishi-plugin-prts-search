@@ -3,6 +3,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { DailyCardData, DailyOperator } from './card-types'
+import { operatorThemeColor } from './operator-colors'
 
 const WEEK_CN = ['日', '一', '二', '三', '四', '五', '六']
 
@@ -771,7 +772,11 @@ export function renderWeeklyHtml(data: DailyCardData, options: { fontsCssLinks: 
   const matched = String(data.dateText || '').match(/(\d+)月(\d+)日/)
   const numericDate = matched ? `${pad2(matched[1])}.${pad2(matched[2])}` : escapeHtml(data.dateText)
   const weekIndex = Math.max(0, WEEK_CN.indexOf(String(data.weekText || '').replace('星期', '')))
-  const accent = ACCENTS[weekIndex]
+  // 当天有生日干员且查得到主题色时，整卡强调色（书脊/星期徽章/生日区）随人走；否则维持星期轮换色
+  const birthdayColor = (data.birthdays || [])
+    .map((op) => operatorThemeColor(op.name))
+    .find(Boolean)
+  const accent = birthdayColor || ACCENTS[weekIndex]
   // 顶部色雾用第一张立绘糊出来；没有生日干员就只留渐变底
   const heroArt = (data.birthdays || [])[0]
   const heroSource = heroArt ? heroArt.art || heroArt.avatar : ''
